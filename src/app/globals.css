@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #F6F3EC;
+  --color-ink: #1E2A24;
+  --color-ochre: #8A6D3B;
+  --color-moss: #3F5A48;
+  --color-divider: #D8D2C2;
+  
+  --font-sans: var(--font-inter), sans-serif;
+  --font-serif: var(--font-playfair), serif;
+  
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    color: var(--color-ink);
+    letter-spacing: -0.025em;
+  }
+}
+
+/* Ledger-specific global rules */
+* {
+  border-radius: 0 !important;
+}
+
+/* Re-allow circle dots for specific things if we use inline styles or specific exceptions */
+.rounded-full {
+  border-radius: 9999px !important;
+}
+
+/* Custom scrollbar for a clean editorial look */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-divider);
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
