@@ -139,12 +139,12 @@ export function LedgerSidebar({ children }) {
         <div className={`flex items-center pt-8 pb-8 ${isCollapsed ? 'px-3 justify-center' : 'px-8 justify-between'}`}>
           {!isCollapsed && (
             <Link href="/" className="flex items-center gap-3">
-              <Image src="/assets/logo.png" alt="Logo" width={20} height={20} className="grayscale contrast-125" />
+              <Image src="/assets/logo1.png" alt="Logo" width={20} height={20} className="grayscale contrast-125" />
               <span className="font-serif font-bold text-ink tracking-tight uppercase text-xs">Working Ledger</span>
             </Link>
           )}
           {isCollapsed && (
-             <Image src="/assets/logo.png" alt="Logo" width={20} height={20} className="grayscale contrast-125 mb-4" />
+             <Image src="/assets/logo1.png" alt="Logo" width={20} height={20} className="grayscale contrast-125 mb-4" />
           )}
           <div className={isCollapsed ? 'absolute top-20' : ''}>
             <TallyToggle onClick={toggleCollapse} collapsed={isCollapsed} />
