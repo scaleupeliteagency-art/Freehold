@@ -151,7 +151,7 @@ const LedgerLine = () => {
 const Nav = () => (
   <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-[#F6F3EC] border-b border-[#D8D2C2]">
     <div className="flex items-center gap-4">
-      <img src="/assets/logo.png" alt="Logo" className="w-12 h-12 grayscale object-contain" />
+      <img src="/assets/logo.png" alt="Logo" className="w-[100px] h-[100px] grayscale object-contain" />
     </div>
     <div className="flex items-center gap-6">
       <Link href="/login" className="text-[10px] font-bold uppercase tracking-widest text-[#1E2A24] hover:text-[#8A6D3B] transition-colors">
