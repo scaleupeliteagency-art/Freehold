@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, BrainCircuit, Activity, Beaker, CheckCircle2, ChevronRight, Settings } from "lucide-react";
+import { ArrowLeft, BrainCircuit, Activity, Beaker, CheckCircle2, ChevronRight, Settings, Search } from "lucide-react";
 
 export default function InsightDetailView() {
   const { id } = useParams();
