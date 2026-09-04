@@ -40,7 +40,7 @@ export function NorthStarLedger({ goals, daysRemainingYear }) {
         </div>
         
         <div className="md:w-2/3">
-          <table className="w-full text-sm text-left">
+          <table className="w-full text-sm text-left mb-6">
             <tbody>
               <tr className="border-b border-divider/50">
                 <td className="py-2 text-ink/70">Target</td>
@@ -64,6 +64,21 @@ export function NorthStarLedger({ goals, daysRemainingYear }) {
               </tr>
             </tbody>
           </table>
+          
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-end">
+              <span className="text-[10px] font-bold text-ink/50 uppercase tracking-widest">Progress</span>
+              <span className="font-mono text-sm font-bold text-ink">
+                {primary.target_value > 0 ? Math.min(100, Math.round(((primary.current_value || 0) / primary.target_value) * 100)) : 0}%
+              </span>
+            </div>
+            <div className="w-full h-1 border border-divider bg-paper">
+              <div 
+                className="h-full bg-ochre transition-all duration-1000 ease-out"
+                style={{ width: `${primary.target_value > 0 ? Math.min(100, Math.round(((primary.current_value || 0) / primary.target_value) * 100)) : 0}%` }}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -85,7 +100,7 @@ export function QuarterLedger({ quarter, daysRemainingQuarter }) {
         </div>
         
         <div className="md:w-2/3">
-          <table className="w-full text-sm text-left">
+          <table className="w-full text-sm text-left mb-6">
             <tbody>
               <tr className="border-b border-divider/50">
                 <td className="py-2 text-ink/70">Target</td>
@@ -105,6 +120,19 @@ export function QuarterLedger({ quarter, daysRemainingQuarter }) {
               </tr>
             </tbody>
           </table>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-end">
+              <span className="text-[10px] font-bold text-ink/50 uppercase tracking-widest">Progress</span>
+              <span className="font-mono text-sm font-bold text-ink">0%</span>
+            </div>
+            <div className="w-full h-1 border border-divider bg-paper">
+              <div 
+                className="h-full bg-ochre transition-all duration-1000 ease-out"
+                style={{ width: `0%` }}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -120,18 +148,36 @@ export function RocksLedger({ rocks }) {
       <hr className="border-divider border-t-2 mb-6" />
       
       <div className="space-y-6">
-        {rocks.map((rock, idx) => (
-          <div key={rock.id} className="border border-divider p-6 bg-white hover:border-ochre transition-colors cursor-pointer flex justify-between items-start">
-            <div>
-              <div className="text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-1">{String(idx + 1).padStart(2, '0')}</div>
-              <div className="text-base font-serif font-bold text-ink mb-2">{rock.name}</div>
-              <div className="text-xs text-ink/70">Milestones: {rock.weekly_milestones?.filter(m => m.status === 'completed').length || 0} / {rock.weekly_milestones?.length || 4} complete</div>
+        {rocks.map((rock, idx) => {
+          const completed = rock.weekly_milestones?.filter(m => m.status === 'completed').length || 0;
+          const total = rock.weekly_milestones?.length || 4;
+          const percentage = Math.round((completed / total) * 100) || 0;
+          return (
+            <div key={rock.id} className="border border-divider p-6 bg-white hover:border-ochre transition-colors cursor-pointer flex flex-col gap-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-1">{String(idx + 1).padStart(2, '0')}</div>
+                  <div className="text-base font-serif font-bold text-ink">{rock.name}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] font-bold text-ochre uppercase tracking-widest">AT RISK</div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between items-end">
+                  <span className="text-xs text-ink/70">Milestones: {completed} / {total}</span>
+                  <span className="font-mono text-[10px] font-bold text-ink">{percentage}%</span>
+                </div>
+                <div className="w-full h-1 border border-divider bg-paper">
+                  <div 
+                    className="h-full bg-ochre transition-all duration-1000 ease-out"
+                    style={{ width: `${percentage}%` }}
+                  />
+                </div>
+              </div>
             </div>
-            <div className="text-right">
-              <div className="text-[10px] font-bold text-ochre uppercase tracking-widest">AT RISK</div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
