@@ -154,9 +154,14 @@ const Nav = () => (
       <img src="/assets/logo.png" alt="Logo" className="w-8 h-8 grayscale object-contain" />
       <span className="font-serif text-sm tracking-widest text-[#1E2A24] font-bold uppercase">THE WORKING LEDGER</span>
     </div>
-    <Link href="/signup" className="bg-[#1E2A24] text-[#F6F3EC] px-6 py-2 text-[10px] uppercase font-bold tracking-widest hover:bg-[#3F5A48] transition-colors rounded-none">
-      BUILD YOUR SYSTEM →
-    </Link>
+    <div className="flex items-center gap-6">
+      <Link href="/login" className="text-[10px] font-bold uppercase tracking-widest text-[#1E2A24] hover:text-[#8A6D3B] transition-colors">
+        Log in
+      </Link>
+      <Link href="/signup" className="bg-[#1E2A24] text-[#F6F3EC] px-6 py-2 text-[10px] uppercase font-bold tracking-widest hover:bg-[#3F5A48] transition-colors rounded-none">
+        BUILD YOUR SYSTEM →
+      </Link>
+    </div>
   </nav>
 );
 
