@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
+import { LayoutDashboard, Settings2, CheckSquare, Target, ClipboardList, Lightbulb, History } from "lucide-react";
 
 const renderTally = (count) => {
   if (!count || count <= 0) return null;
@@ -106,13 +107,13 @@ export function LedgerSidebar({ children }) {
   };
 
   const mainNav = [
-    { label: "Dashboard", href: "/dashboard", shortcut: "d" },
-    { label: "System", href: "/system", shortcut: "s" },
-    { label: "Daily Inputs", href: "/inputs", shortcut: "i", tally: 3 },
-    { label: "Results", href: "/results", shortcut: "r" },
-    { label: "Review", href: "/reviews", shortcut: "v", tally: 1 },
-    { label: "Insights", href: "/insights", shortcut: "k" },
-    { label: "History", href: "/history", shortcut: "h" },
+    { label: "Dashboard", href: "/dashboard", shortcut: "d", icon: LayoutDashboard },
+    { label: "System", href: "/system", shortcut: "s", icon: Settings2 },
+    { label: "Daily Inputs", href: "/inputs", shortcut: "i", tally: 3, icon: CheckSquare },
+    { label: "Results", href: "/results", shortcut: "r", icon: Target },
+    { label: "Review", href: "/reviews", shortcut: "v", tally: 1, icon: ClipboardList },
+    { label: "Insights", href: "/insights", shortcut: "k", icon: Lightbulb },
+    { label: "History", href: "/history", shortcut: "h", icon: History },
   ];
 
   const isReviewContext = pathname?.includes("/reviews");
@@ -181,7 +182,7 @@ export function LedgerSidebar({ children }) {
                 >
                   <span className={`
                     transition-all 
-                    ${isCollapsed ? 'text-xs uppercase tracking-widest writing-vertical rotate-180 py-4 opacity-50 hover:opacity-100' : ''} 
+                    ${isCollapsed ? 'opacity-50 hover:opacity-100 flex items-center justify-center' : ''} 
                     ${isActive ? 'text-ink' : 'text-ink/60 hover:text-ink'}
                   `}>
                     {!isCollapsed ? (
@@ -189,7 +190,7 @@ export function LedgerSidebar({ children }) {
                         {item.label}
                       </span>
                     ) : (
-                      item.label.substring(0, 3)
+                      <item.icon size={20} strokeWidth={1.5} />
                     )}
                   </span>
                   
