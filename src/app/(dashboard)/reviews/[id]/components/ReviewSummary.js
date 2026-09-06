@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useReviewEngineStore from "@/lib/store/useReviewEngineStore";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function ReviewSummary({ onBack, onComplete }) {
@@ -99,33 +99,30 @@ export default function ReviewSummary({ onBack, onComplete }) {
       </div>
 
       {/* Completion Section */}
-      <div className="bg-[#B8862E]/10 border border-[#B8862E]/20 rounded-xl p-8 flex flex-col items-center text-center">
-        <Lock className="w-8 h-8 text-[#B8862E] mb-4" />
-        <h3 className="text-xl font-bold text-white mb-2">Lock & Complete Review</h3>
-        <p className="text-sm text-gray-400 max-w-md mb-8">
-          Completing this review will permanently lock the record and apply these insights to your system history. This cannot be undone.
+      <div className="border-2 border-ink bg-ink p-8 flex flex-col items-center text-center">
+        <CheckCircle2 className="w-8 h-8 text-paper mb-4" />
+        <h3 className="text-xl font-serif font-bold text-paper uppercase mb-2">Complete This Review</h3>
+        <p className="text-sm text-paper/70 max-w-md mb-8 leading-relaxed">
+          Completing this review will unfreeze your system, schedule the next review in 7 days, and permanently lock this record.
         </p>
-        
-        <button 
+        <button
           onClick={handleComplete}
           disabled={completing}
-          className="bg-[#B8862E] text-white px-12 py-4 rounded-xl text-base font-bold hover:bg-[#A37525] hover:scale-105 transition-all shadow-[0_0_30px_rgba(184,134,46,0.3)] flex items-center justify-center gap-3 w-full sm:w-auto disabled:opacity-50 disabled:hover:scale-100"
+          className="bg-paper text-ink px-12 py-4 text-[10px] font-bold uppercase tracking-widest hover:bg-ochre hover:text-paper transition-colors disabled:opacity-50 flex items-center gap-3"
         >
           {completing ? (
-            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <span className="animate-pulse">Completing...</span>
           ) : (
-            <>
-              <CheckCircle2 className="w-5 h-5" /> Complete Review
-            </>
+            <><CheckCircle2 className="w-4 h-4" /> Lock &amp; Complete Review</>
           )}
         </button>
       </div>
 
-      <div className="pt-8 flex justify-start mt-8">
-        <button 
+      <div className="pt-8 flex justify-start">
+        <button
           onClick={onBack}
           disabled={completing}
-          className="text-gray-400 px-6 py-3 rounded-lg text-sm font-semibold hover:text-white transition-all flex items-center gap-2 disabled:opacity-50"
+          className="text-ink/60 text-sm font-bold uppercase tracking-widest hover:text-ink transition-colors flex items-center gap-2 disabled:opacity-50"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Decisions
         </button>
