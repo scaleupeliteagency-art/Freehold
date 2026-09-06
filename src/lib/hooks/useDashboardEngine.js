@@ -23,7 +23,7 @@ export function useDashboardEngine() {
         const { data: systems } = await supabase
           .from("systems")
           .select("*")
-          .eq("status", "ACTIVE")
+          .eq("status", "active")
           .limit(1);
 
         if (!systems || systems.length === 0) {
@@ -46,7 +46,7 @@ export function useDashboardEngine() {
           .from("quarters")
           .select("*, year_plans!inner(system_id), monthly_rocks(*, weekly_milestones(*))")
           .eq("year_plans.system_id", system.id)
-          .eq("status", "ACTIVE")
+          .eq("status", "active")
           .limit(1);
 
         const quarter = quarters?.[0] || null;

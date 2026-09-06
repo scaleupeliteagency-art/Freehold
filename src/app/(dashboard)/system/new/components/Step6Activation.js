@@ -28,14 +28,14 @@ export default function Step6Activation() {
       const userId = user.id;
 
       // 1. Archive existing active systems for this user
-      await supabase.from("systems").update({ status: 'ARCHIVED' }).eq('user_id', userId).eq('status', 'ACTIVE');
+      await supabase.from("systems").update({ status: 'archived' }).eq('user_id', userId).eq('status', 'active');
 
       // 2. Insert new system
       const { data: sysData, error: sysErr } = await supabase.from("systems").insert({
         user_id: userId,
         name: systemIdentity.name,
         description: systemIdentity.why,
-        status: 'ACTIVE'
+        status: 'active'
       }).select().single();
       
       if (sysErr) throw sysErr;
@@ -58,7 +58,7 @@ export default function Step6Activation() {
       const { data: yearData, error: yearErr } = await supabase.from("year_plans").insert({
         system_id: systemId,
         year_number: roadmap.year,
-        status: 'ACTIVE'
+        status: 'active'
       }).select().single();
       
       if (yearErr) throw yearErr;
@@ -68,7 +68,7 @@ export default function Step6Activation() {
         year_plan_id: yearData.id,
         quarter_number: roadmap.quarter,
         objective: roadmap.quarterlyObjective?.name || 'Quarterly Objective',
-        status: 'ACTIVE'
+        status: 'active'
       }).select().single();
 
       if (quarterErr) throw quarterErr;
@@ -83,7 +83,7 @@ export default function Step6Activation() {
             name: rock.name,
             description: rock.description,
             deadline: rock.deadline ? rock.deadline : null,
-            status: 'ACTIVE'
+            status: 'active'
           }).select().single();
 
           if (!rockErr && rockData && rock.milestones && rock.milestones.length > 0) {
@@ -91,7 +91,7 @@ export default function Step6Activation() {
               monthly_rock_id: rockData.id,
               name: m.name,
               week_number: i + 1,
-              status: 'PENDING'
+              status: 'pending'
             }));
             
             if (milestoneInserts.length > 0) {

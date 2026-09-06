@@ -17,7 +17,7 @@ export default function InsightsCenter() {
         const { data: systems } = await supabase
           .from("systems")
           .select("id, name")
-          .eq("status", "ACTIVE")
+          .eq("status", "active")
           .limit(1);
 
         if (systems && systems.length > 0) {

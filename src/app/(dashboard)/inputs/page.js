@@ -19,7 +19,7 @@ export default function DailyInputsPage() {
         const { data: systems } = await supabase
           .from("systems")
           .select("*")
-          .eq("status", "ACTIVE")
+          .eq("status", "active")
           .limit(1);
 
         if (!systems || systems.length === 0) {
@@ -52,7 +52,7 @@ export default function DailyInputsPage() {
         const { data: milestones } = await supabase
           .from("weekly_milestones")
           .select("name, monthly_rocks(name)")
-          .eq("status", "ACTIVE")
+          .eq("status", "active")
           .limit(1);
 
         if (milestones && milestones.length > 0) {
