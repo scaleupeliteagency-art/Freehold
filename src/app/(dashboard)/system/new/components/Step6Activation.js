@@ -31,11 +31,17 @@ export default function Step6Activation() {
       await supabase.from("systems").update({ status: 'archived' }).eq('user_id', userId).eq('status', 'active');
 
       // 2. Insert new system
+      const reviewDate = new Date(startDate);
+      reviewDate.setDate(reviewDate.getDate() + 7); // First review due 7 days after start
+
       const { data: sysData, error: sysErr } = await supabase.from("systems").insert({
         user_id: userId,
         name: systemIdentity.name,
         description: systemIdentity.why,
-        status: 'active'
+        status: 'active',
+        start_date: new Date(startDate).toISOString(),
+        next_review_date: reviewDate.toISOString(),
+        is_frozen: false
       }).select().single();
       
       if (sysErr) throw sysErr;
@@ -134,6 +140,8 @@ export default function Step6Activation() {
     }
   };
 
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 text-left py-12 px-8 bg-paper border border-divider">
       <div className="mb-8">
@@ -142,6 +150,17 @@ export default function Step6Activation() {
           You are about to lock in your North Star and initialize System Version 1.0. 
           Once activated, this system will become the central engine for your long-term execution.
         </p>
+      </div>
+
+      <div className="mb-8 p-6 border border-divider bg-white max-w-lg">
+        <label className="block text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-2">System Start Date</label>
+        <p className="text-xs text-ink/70 mb-4">Set the official date when tracking begins for this system.</p>
+        <input 
+          type="date" 
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="w-full bg-paper border border-divider px-4 py-2 font-mono text-sm text-ink outline-none focus:border-ink transition-colors"
+        />
       </div>
 
       <hr className="border-divider mb-8" />

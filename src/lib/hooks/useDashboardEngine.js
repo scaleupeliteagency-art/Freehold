@@ -13,7 +13,9 @@ export function useDashboardEngine() {
     inputs: [],
     health: null,
     bottleneck: null,
-    actions: []
+    actions: [],
+    isFrozen: false,
+    nextReviewDate: null
   });
 
   useEffect(() => {
@@ -165,6 +167,10 @@ export function useDashboardEngine() {
            actions.push({ priority: "MEDIUM", text: "Record missing result data", reason: "Outcome tracking is empty." });
         }
 
+        // Check if system is frozen (review overdue)
+        const isFrozen = system.is_frozen === true || 
+          (system.next_review_date && new Date(system.next_review_date) < new Date());
+
         setData({
           system,
           daysRemainingYear,
@@ -178,7 +184,9 @@ export function useDashboardEngine() {
           health,
           constraint,
           priority,
-          actions
+          actions,
+          isFrozen,
+          nextReviewDate: system.next_review_date || null
         });
 
       } catch (err) {

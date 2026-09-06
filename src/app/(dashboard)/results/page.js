@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import RecordResultModal from "./components/RecordResultModal";
 
 export default function ResultsPage() {
   const [loading, setLoading] = useState(true);
@@ -12,6 +13,9 @@ export default function ResultsPage() {
   const [filterPeriod, setFilterPeriod] = useState("This Week");
   const [systemLevelFilter, setSystemLevelFilter] = useState("All");
   
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -114,7 +118,27 @@ export default function ResultsPage() {
       }
     }
     fetchResults();
-  }, []);
+  }, [refreshTrigger]);
+
+  const handleSaveResult = async (recordData) => {
+    try {
+      const { error } = await supabase.from("result_records").insert({
+        result_definition_id: recordData.definition_id,
+        period_label: recordData.period_label,
+        actual_value: recordData.actual_value,
+        target_value: recordData.target_value,
+        baseline_value: recordData.baseline_value,
+      });
+
+      if (error) throw error;
+      
+      setIsModalOpen(false);
+      setRefreshTrigger(prev => prev + 1);
+    } catch (err) {
+      console.error("Error saving result:", err);
+      alert("Failed to save result.");
+    }
+  };
 
   if (loading) {
     return (
@@ -153,7 +177,10 @@ export default function ResultsPage() {
             <option>This Month</option>
             <option>This Quarter</option>
           </select>
-          <button className="bg-ink text-paper text-sm font-bold uppercase tracking-widest py-2 px-5 hover:bg-ink/80 transition-colors">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-ink text-paper text-sm font-bold uppercase tracking-widest py-2 px-5 hover:bg-ink/80 transition-colors"
+          >
             + Record Result
           </button>
         </div>
@@ -348,6 +375,13 @@ export default function ResultsPage() {
           </div>
         </div>
       </section>
+
+      <RecordResultModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        definitions={results}
+        onSave={handleSaveResult}
+      />
 
     </div>
   );

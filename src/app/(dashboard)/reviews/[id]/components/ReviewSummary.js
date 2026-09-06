@@ -2,37 +2,36 @@
 
 import { useState } from "react";
 import useReviewEngineStore from "@/lib/store/useReviewEngineStore";
-import { ArrowLeft, CheckCircle2, Lock } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export default function ReviewSummary({ onBack }) {
+export default function ReviewSummary({ onBack, onComplete }) {
   const { reviewContext, snapshots, investigation, decisions, resetReview } = useReviewEngineStore();
   const [completing, setCompleting] = useState(false);
   const router = useRouter();
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     setCompleting(true);
-    
-    // In production, this saves the draft to the DB and sets status to COMPLETED
-    setTimeout(() => {
-      // alert("Review officially recorded and locked.");
-      resetReview();
-      router.push("/reviews");
-    }, 1500);
+    if (onComplete) {
+      await onComplete();
+    }
+    resetReview();
+    router.push("/dashboard");
   };
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="mb-8 flex justify-between items-end border-b border-white/5 pb-6">
-        <div>
-          <h2 className="text-3xl font-bold text-white tracking-tight mb-2">Final Review Summary</h2>
-          <p className="text-[#B8862E] text-sm font-semibold uppercase tracking-widest">
-            {reviewContext.type} REVIEW • {reviewContext.periodStart} to {reviewContext.periodEnd}
-          </p>
-        </div>
+    <div className="animate-in fade-in duration-300">
+      <div className="mb-8">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-2">Step 8 · Summary</div>
+        <h2 className="text-2xl font-serif font-bold text-ink uppercase mb-3">Final Review Summary</h2>
+        <p className="text-sm text-ochre font-bold uppercase tracking-widest">
+          {reviewContext.type} Review · {reviewContext.periodStart} → {reviewContext.periodEnd}
+        </p>
       </div>
 
-      <div className="space-y-12 mb-12">
+      <hr className="border-divider mb-8" />
+
+      <div className="space-y-8 mb-12">
         {/* Constraints */}
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 border-l-2 border-gray-700 pl-3">Largest Constraint</h3>
