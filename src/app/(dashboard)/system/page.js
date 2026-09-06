@@ -22,7 +22,7 @@ export default function SystemOverviewPage() {
         const { data: systems, error } = await supabase
           .from("systems")
           .select("*")
-          .eq("status", "active")
+          .eq("status", "ACTIVE")
           .limit(1);
 
         if (error) throw error;

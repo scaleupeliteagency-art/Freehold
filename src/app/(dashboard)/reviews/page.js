@@ -19,7 +19,7 @@ export default function ReviewCenter() {
         const { data: systems } = await supabase
           .from("systems")
           .select("id, name")
-          .eq("status", "active")
+          .eq("status", "ACTIVE")
           .limit(1);
 
         if (systems && systems.length > 0) {

@@ -11,7 +11,7 @@ export default function EvolutionView() {
   useEffect(() => {
     async function fetchEvolution() {
       try {
-        const { data: systems } = await supabase.from("systems").select("id, created_at").eq("status", "active").limit(1);
+        const { data: systems } = await supabase.from("systems").select("id, created_at").eq("status", "ACTIVE").limit(1);
         if (!systems || systems.length === 0) { setLoading(false); return; }
 
         const systemId = systems[0].id;

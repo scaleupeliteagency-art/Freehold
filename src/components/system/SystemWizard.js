@@ -80,7 +80,7 @@ export default function SystemWizard() {
           name: data.name,
           why: data.why,
           category: 'General',
-          status: 'active',
+          status: 'ACTIVE',
           current_phase: 'Foundation'
         }]).select().single();
 
@@ -121,7 +121,7 @@ export default function SystemWizard() {
         .insert([{
           system_id: system.id,
           year_number: currentYear,
-          status: 'active'
+          status: 'ACTIVE'
         }]).select().single();
       if (yearError) throw yearError;
 
@@ -132,7 +132,7 @@ export default function SystemWizard() {
           year_plan_id: yearPlan.id,
           quarter_number: Math.floor((new Date().getMonth() / 3)) + 1,
           objective: data.roadmap.quarter.objective,
-          status: 'active'
+          status: 'ACTIVE'
         }]).select().single();
       if (qError) throw qError;
 
@@ -149,7 +149,7 @@ export default function SystemWizard() {
             quarter_id: quarter.id,
             name: rockData.name,
             month: (new Date().getMonth() + 1) + i, // Rough estimation for MVP
-            status: 'active'
+            status: 'ACTIVE'
           }]).select().single();
         
         if (rError) throw rError;
@@ -170,7 +170,7 @@ export default function SystemWizard() {
               current_value: 0,
               target: msData.target,
               deadline: msData.deadline,
-              status: 'active'
+              status: 'ACTIVE'
             }]).select().single();
 
           if (msError) throw msError;

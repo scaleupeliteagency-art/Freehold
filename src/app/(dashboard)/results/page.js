@@ -20,7 +20,7 @@ export default function ResultsPage() {
         const { data: systems } = await supabase
           .from("systems")
           .select("id")
-          .eq("status", "active")
+          .eq("status", "ACTIVE")
           .limit(1);
 
         if (!systems || systems.length === 0) {
