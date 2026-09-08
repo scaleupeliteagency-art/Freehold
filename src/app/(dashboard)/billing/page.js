@@ -133,20 +133,21 @@ export default function BillingPage() {
         proofUrl = await handleFileUpload(proofFile);
       }
 
-      const finalAmount = getFinalPrice(selectedPlan);
+      const activePlan = selectedPlan || "monthly";
+      const finalAmount = getFinalPrice(activePlan);
 
-      // 1. Insert Payment Record
+      // 1. Create Payment Record
       const { error: paymentError } = await supabase
         .from("payments")
         .insert({
           user_id: user.id,
-          plan_type: selectedPlan,
           amount: finalAmount,
           currency: "MAD",
           payment_method: paymentMethod,
+          plan_type: activePlan,
+          promo_code_id: appliedPromo ? appliedPromo.id : null,
           proof_url: proofUrl,
-          transaction_reference: transactionId,
-          promo_code_used: appliedPromo?.code || null,
+          transaction_id: transactionId || null,
           status: "pending"
         });
 
@@ -156,7 +157,7 @@ export default function BillingPage() {
       await supabase
         .from("profiles")
         .update({ 
-          subscription_plan: selectedPlan,
+          subscription_plan: activePlan,
           subscription_status: "pending_payment" 
         })
         .eq("user_id", user.id);
@@ -205,6 +206,17 @@ export default function BillingPage() {
   };
 
   const isActive = profile?.subscription_status === 'active' || profile?.is_admin;
+  const currentPlan = profile?.is_admin ? "LIFETIME (ADMIN)" : (profile?.subscription_plan || "None");
+  const expirationStr = profile?.is_admin ? "Never Expires" : (profile?.subscription_end_date ? new Date(profile.subscription_end_date).toLocaleDateString() : "—");
+
+  const statusDisplay = (status) => {
+    switch (status) {
+      case 'approved': return { text: 'PAID', style: 'bg-moss/10 text-moss border-moss/20' };
+      case 'pending': return { text: 'WAITING FOR CONFIRMATION', style: 'bg-ochre/10 text-ochre border-ochre/20' };
+      case 'rejected': return { text: 'UNPAID', style: 'bg-red-500/10 text-red-600 border-red-500/20' };
+      default: return { text: status, style: 'bg-ink/10 text-ink border-ink/20' };
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-6 animate-in fade-in duration-500 text-ink">
@@ -223,141 +235,114 @@ export default function BillingPage() {
         </button>
 
         <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4 uppercase tracking-tight">
-           {isActive ? "Your Ledger Subscription" : "Activate Your Ledger"}
+           Your Ledger Subscription
         </h1>
         <p className="text-lg text-ink/70 max-w-2xl mx-auto">
-          {isActive ? "Manage your billing, view your current plan, and access payment history." : "Choose a plan to continue accessing your system. Built for serious execution."}
+          Manage your billing, view your current plan, and access payment history.
         </p>
       </div>
 
-      {isActive && (
-        <div className="border border-divider bg-white p-8 mb-16 max-w-2xl mx-auto">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-1">Current Status</div>
-              <div className="text-2xl font-serif font-bold flex items-center gap-2">
-                <CheckCircle2 className="w-6 h-6 text-moss" />
-                Active
+      {checkoutStep === 1 && (
+        <>
+          <div className="border border-divider bg-white p-8 mb-16 max-w-2xl mx-auto">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-1">Current Status</div>
+                <div className={`text-2xl font-serif font-bold flex items-center gap-2 ${isActive ? 'text-moss' : 'text-ochre'}`}>
+                  {isActive ? <CheckCircle2 className="w-6 h-6" /> : null}
+                  {isActive ? 'Active' : 'Inactive'}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-1">Plan</div>
+                <div className="font-bold text-lg uppercase tracking-widest text-ink">
+                   {currentPlan}
+                </div>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-1">Plan</div>
-              <div className="font-bold text-lg uppercase tracking-widest text-ink">
-                 {profile?.is_admin ? "LIFETIME (ADMIN)" : (profile?.subscription_plan || "Standard")}
-              </div>
-            </div>
-          </div>
-          
-          <hr className="border-divider mb-6" />
-          
-          <div className="flex justify-between items-center">
-             <div>
-               <div className="text-xs text-ink/70 mb-1">Expiration Date</div>
-               <div className="font-mono text-sm font-bold text-ink">
-                 {profile?.is_admin ? "Never Expires" : (profile?.subscription_end_date ? new Date(profile.subscription_end_date).toLocaleDateString() : "—")}
+            
+            <hr className="border-divider mb-6" />
+            
+            <div className="flex justify-between items-center">
+               <div>
+                 <div className="text-xs text-ink/70 mb-1">Expiration Date</div>
+                 <div className="font-mono text-sm font-bold text-ink">
+                   {expirationStr}
+                 </div>
                </div>
-             </div>
-             
-             {!profile?.is_admin && (
-                <button onClick={() => alert("Please contact support to modify or cancel your plan.")} className="border border-divider text-ink px-6 py-2 text-[10px] font-bold uppercase tracking-widest hover:border-ink transition-colors">
-                  Manage Plan
-                </button>
-             )}
-          </div>
-        </div>
-      )}
-      
-      {!isActive && checkoutStep === 1 && (
-        <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto mb-16">
-          {/* Monthly Plan */}
-          <div className="border border-divider bg-paper p-8 flex flex-col relative">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-2">Standard</div>
-            <h2 className="text-2xl font-serif font-bold mb-4">Monthly Commitment</h2>
-            <div className="mb-6">
-              <span className="text-4xl font-serif font-bold text-ink">{BASE_MONTHLY}</span>
-              <span className="text-sm font-bold text-ink/50 uppercase ml-2 tracking-widest">MAD / month</span>
+               
+               {!profile?.is_admin && (
+                  <button onClick={() => setCheckoutStep(2)} className="border border-divider bg-ink text-paper px-6 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-ink/80 transition-colors">
+                    Submit New Payment
+                  </button>
+               )}
             </div>
-            
-            <ul className="space-y-3 mb-10 flex-1">
-              <li className="flex items-start gap-3">
-                <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
-                <span className="text-sm text-ink/80">Full access to the Working Ledger</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
-                <span className="text-sm text-ink/80">Goal & rock tracking</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
-                <span className="text-sm text-ink/80">Weekly diagnostic reviews</span>
-              </li>
-            </ul>
-
-            <button
-              onClick={() => { setSelectedPlan("monthly"); setCheckoutStep(2); }}
-              className="w-full border-2 border-ink text-ink py-4 text-[10px] font-bold uppercase tracking-widest hover:bg-ink hover:text-paper transition-colors"
-            >
-              Select Monthly Plan
-            </button>
           </div>
 
-          {/* Yearly Plan */}
-          <div className="border-2 border-ochre bg-white p-8 flex flex-col relative shadow-[8px_8px_0px_0px_rgba(30,42,36,0.1)]">
-            <div className="absolute top-0 right-0 bg-ochre text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1 m-4">
-              Save 20%
-            </div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-ochre mb-2">Professional</div>
-            <h2 className="text-2xl font-serif font-bold mb-4">Yearly Commitment</h2>
-            <div className="mb-6 flex flex-col">
-              <div className="flex items-end gap-2">
-                <span className="text-4xl font-serif font-bold text-ink">{BASE_YEARLY}</span>
-                <span className="text-sm font-bold text-ink/50 uppercase tracking-widest mb-1">MAD / year</span>
+          {/* Payment History Table */}
+          <div className="mt-8 max-w-4xl mx-auto">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-ink mb-4">Payment History</h3>
+            {payments.length > 0 ? (
+              <div className="bg-white border border-divider overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-divider bg-paper text-[10px] uppercase tracking-widest text-ink/50">
+                      <th className="p-4 font-bold">Date</th>
+                      <th className="p-4 font-bold">Plan</th>
+                      <th className="p-4 font-bold">Amount</th>
+                      <th className="p-4 font-bold">Method</th>
+                      <th className="p-4 font-bold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.map(p => {
+                      const display = statusDisplay(p.status);
+                      return (
+                        <tr key={p.id} className="border-b border-divider last:border-0 hover:bg-paper/50">
+                          <td className="p-4 text-xs font-mono">{new Date(p.created_at).toLocaleDateString()}</td>
+                          <td className="p-4 text-xs font-bold uppercase tracking-widest">{p.plan_type || 'Custom'}</td>
+                          <td className="p-4 text-sm font-serif font-bold">{p.amount} {p.currency}</td>
+                          <td className="p-4 text-xs font-mono">{p.payment_method.replace('_', ' ')}</td>
+                          <td className="p-4">
+                            <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${display.style}`}>
+                              {display.text}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-              <span className="text-xs text-ink/40 line-through mt-1">540 MAD</span>
-            </div>
-            
-            <ul className="space-y-3 mb-10 flex-1">
-              <li className="flex items-start gap-3">
-                <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
-                <span className="text-sm text-ink/80">Full access to the Working Ledger</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
-                <span className="text-sm text-ink/80">Goal & rock tracking</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
-                <span className="text-sm text-ink/80">Weekly diagnostic reviews</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
-                <span className="text-sm font-bold text-ink">Locked-in 20% discount</span>
-              </li>
-            </ul>
-
-            <button
-              onClick={() => { setSelectedPlan("yearly"); setCheckoutStep(2); }}
-              className="w-full bg-ink text-paper py-4 text-[10px] font-bold uppercase tracking-widest hover:bg-ink/80 transition-colors"
-            >
-              Select Yearly Plan
-            </button>
+            ) : (
+              <div className="text-sm text-ink/50 border border-divider p-8 text-center bg-white">
+                No transactions found.
+              </div>
+            )}
           </div>
-        </div>
+        </>
       )}
 
-      {!isActive && checkoutStep === 2 && (
+      {checkoutStep === 2 && (
         <div className="max-w-2xl mx-auto">
-          <button onClick={() => setCheckoutStep(1)} className="text-[10px] font-bold uppercase tracking-widest text-ink/50 hover:text-ink mb-6">← Back to plans</button>
+          <button onClick={() => setCheckoutStep(1)} className="text-[10px] font-bold uppercase tracking-widest text-ink/50 hover:text-ink mb-6">← Back to dashboard</button>
           
           <h2 className="text-3xl font-serif font-bold mb-6 uppercase tracking-tight">Complete Payment</h2>
           
           <div className="border border-divider bg-white p-6 mb-8 flex justify-between items-center">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-1">Selected Plan</div>
-              <div className="font-serif font-bold text-xl capitalize">{selectedPlan} Commitment</div>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-2">Select Plan</div>
+              <select 
+                value={selectedPlan || "monthly"} 
+                onChange={(e) => setSelectedPlan(e.target.value)}
+                className="font-serif font-bold text-xl bg-transparent border-b border-divider focus:outline-none cursor-pointer"
+              >
+                <option value="monthly">Monthly Commitment</option>
+                <option value="yearly">Yearly Commitment</option>
+              </select>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-serif font-bold">{getFinalPrice(selectedPlan)} MAD</div>
+              <div className="text-2xl font-serif font-bold">{getFinalPrice(selectedPlan || "monthly")} MAD</div>
               {appliedPromo && <div className="text-xs text-ochre font-bold uppercase tracking-widest mt-1">Discount Applied (-{appliedPromo.discount_percentage}%)</div>}
             </div>
           </div>
@@ -488,44 +473,6 @@ export default function BillingPage() {
         </div>
       )}
 
-      {/* Payment History Table */}
-      {(isActive || checkoutStep === 1) && payments.length > 0 && (
-        <div className="mt-24 max-w-4xl mx-auto">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-ink mb-4">Payment History</h3>
-          <div className="bg-white border border-divider overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-divider bg-paper text-[10px] uppercase tracking-widest text-ink/50">
-                  <th className="p-4 font-bold">Date</th>
-                  <th className="p-4 font-bold">Plan</th>
-                  <th className="p-4 font-bold">Amount</th>
-                  <th className="p-4 font-bold">Method</th>
-                  <th className="p-4 font-bold">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payments.map(p => (
-                  <tr key={p.id} className="border-b border-divider last:border-0 hover:bg-paper/50">
-                    <td className="p-4 text-xs font-mono">{new Date(p.created_at).toLocaleDateString()}</td>
-                    <td className="p-4 text-xs font-bold uppercase tracking-widest">{p.plan_type}</td>
-                    <td className="p-4 text-sm font-serif font-bold">{p.amount} {p.currency}</td>
-                    <td className="p-4 text-xs font-mono">{p.payment_method.replace('_', ' ')}</td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${
-                        p.status === 'approved' ? 'bg-moss/10 text-moss border-moss/20' :
-                        p.status === 'pending' ? 'bg-ochre/10 text-ochre border-ochre/20' :
-                        'bg-red-500/10 text-red-600 border-red-500/20'
-                      }`}>
-                        {p.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
