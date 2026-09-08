@@ -20,6 +20,9 @@ export default function BillingPage() {
   const [transactionId, setTransactionId] = useState("");
   const [checkoutStep, setCheckoutStep] = useState(1); // 1: Choose plan, 2: Checkout, 3: Success
 
+  const [currentUser, setCurrentUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+
   const router = useRouter();
 
   const BASE_MONTHLY = 45;
@@ -28,7 +31,12 @@ export default function BillingPage() {
   useEffect(() => {
     fetchPayments();
     supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) setCurrentUser(data.user.email);
+      if (data?.user) {
+        setCurrentUser(data.user.email);
+        supabase.from("profiles").select("*").eq("user_id", data.user.id).single().then(res => {
+          if (res.data) setProfile(res.data);
+        });
+      }
     });
   }, []);
 
