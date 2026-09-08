@@ -172,8 +172,6 @@ export default function BillingPage() {
     setTransactionId("");
   };
 
-  const [currentUser, setCurrentUser] = useState(null);
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = "/login";
@@ -184,22 +182,13 @@ export default function BillingPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       
-      // Try to select first
       const { data: existingProfile } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
-      
       if (existingProfile) {
         await supabase.from("profiles").update({ is_admin: true, subscription_status: 'active' }).eq("user_id", user.id);
       } else {
         await supabase.from("profiles").insert([{ user_id: user.id, is_admin: true, subscription_status: 'active', name: 'Admin User' }]);
       }
       
-      // Verify
-      const { data: profile } = await supabase.from("profiles").select("is_admin, subscription_status").eq("user_id", user.id).single();
-      if (!profile?.is_admin) {
-         alert(`Warning: Database did not save the admin state for ${user.email}. Please run the SQL migration in Supabase.`);
-         return;
-      }
-
       alert(`Success! Profile for ${user.email} verified as Admin. Redirecting to dashboard...`);
       window.location.href = "/dashboard";
     } catch (err) {
@@ -207,110 +196,144 @@ export default function BillingPage() {
     }
   };
 
+  const isActive = profile?.subscription_status === 'active' || profile?.is_admin;
+
   return (
     <div className="max-w-4xl mx-auto py-12 px-6 animate-in fade-in duration-500 text-ink">
       
-      {checkoutStep === 1 && (
-        <>
-          <div className="text-center mb-16 relative">
-            <div className="absolute -top-6 left-0 text-xs text-ink/50 font-mono">
-              Logged in as: <strong>{currentUser || 'Loading...'}</strong>
-              <button onClick={handleLogout} className="ml-4 underline hover:text-ink">Sign Out</button>
-            </div>
+      <div className="text-center mb-16 relative">
+        <div className="absolute -top-6 left-0 text-xs text-ink/50 font-mono">
+          Logged in as: <strong>{currentUser || 'Loading...'}</strong>
+          <button onClick={handleLogout} className="ml-4 underline hover:text-ink">Sign Out</button>
+        </div>
 
-            {/* Hidden Dev Button */}
-            <button 
-              onClick={handleMakeAdmin}
-              className="absolute -top-6 right-0 text-[10px] bg-ink text-paper px-3 py-1 uppercase tracking-widest font-bold"
+        <button 
+          onClick={handleMakeAdmin}
+          className="absolute -top-6 right-0 text-[10px] bg-ink text-paper px-3 py-1 uppercase tracking-widest font-bold"
+        >
+          🛠️ Force Admin Access (Dev)
+        </button>
+
+        <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4 uppercase tracking-tight">
+           {isActive ? "Your Ledger Subscription" : "Activate Your Ledger"}
+        </h1>
+        <p className="text-lg text-ink/70 max-w-2xl mx-auto">
+          {isActive ? "Manage your billing, view your current plan, and access payment history." : "Choose a plan to continue accessing your system. Built for serious execution."}
+        </p>
+      </div>
+
+      {isActive ? (
+        <div className="border border-divider bg-white p-8 mb-16 max-w-2xl mx-auto">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-1">Current Status</div>
+              <div className="text-2xl font-serif font-bold flex items-center gap-2">
+                <CheckCircle2 className="w-6 h-6 text-moss" />
+                Active
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-1">Plan</div>
+              <div className="font-bold text-lg uppercase tracking-widest text-ink">
+                 {profile?.is_admin ? "LIFETIME (ADMIN)" : (profile?.subscription_plan || "Standard")}
+              </div>
+            </div>
+          </div>
+          
+          <hr className="border-divider mb-6" />
+          
+          <div className="flex justify-between items-center">
+             <div>
+               <div className="text-xs text-ink/70 mb-1">Expiration Date</div>
+               <div className="font-mono text-sm font-bold text-ink">
+                 {profile?.is_admin ? "Never Expires" : (profile?.subscription_end_date ? new Date(profile.subscription_end_date).toLocaleDateString() : "—")}
+               </div>
+             </div>
+             
+             {!profile?.is_admin && (
+                <button onClick={() => alert("Please contact support to modify or cancel your plan.")} className="border border-divider text-ink px-6 py-2 text-[10px] font-bold uppercase tracking-widest hover:border-ink transition-colors">
+                  Manage Plan
+                </button>
+             )}
+          </div>
+        </div>
+      ) : checkoutStep === 1 ? (
+        <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto mb-16">
+          {/* Monthly Plan */}
+          <div className="border border-divider bg-paper p-8 flex flex-col relative">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-2">Standard</div>
+            <h2 className="text-2xl font-serif font-bold mb-4">Monthly Commitment</h2>
+            <div className="mb-6">
+              <span className="text-4xl font-serif font-bold text-ink">{BASE_MONTHLY}</span>
+              <span className="text-sm font-bold text-ink/50 uppercase ml-2 tracking-widest">MAD / month</span>
+            </div>
+            
+            <ul className="space-y-3 mb-10 flex-1">
+              <li className="flex items-start gap-3">
+                <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
+                <span className="text-sm text-ink/80">Full access to the Working Ledger</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
+                <span className="text-sm text-ink/80">Goal & rock tracking</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
+                <span className="text-sm text-ink/80">Weekly diagnostic reviews</span>
+              </li>
+            </ul>
+
+            <button
+              onClick={() => { setSelectedPlan("monthly"); setCheckoutStep(2); }}
+              className="w-full border-2 border-ink text-ink py-4 text-[10px] font-bold uppercase tracking-widest hover:bg-ink hover:text-paper transition-colors"
             >
-              🛠️ Force Admin Access (Dev)
+              Select Monthly Plan
             </button>
-
-            <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4 uppercase tracking-tight">Activate Your Ledger</h1>
-            <p className="text-lg text-ink/70 max-w-2xl mx-auto">
-              Choose a plan to continue accessing your system. Built for serious execution.
-            </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-            {/* Monthly Plan */}
-            <div className="border border-divider bg-paper p-8 flex flex-col relative">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-2">Standard</div>
-              <h2 className="text-2xl font-serif font-bold mb-4">Monthly Commitment</h2>
-              <div className="mb-6">
-                <span className="text-4xl font-serif font-bold text-ink">{BASE_MONTHLY}</span>
-                <span className="text-sm font-bold text-ink/50 uppercase ml-2 tracking-widest">MAD / month</span>
-              </div>
-              
-              <ul className="space-y-3 mb-10 flex-1">
-                <li className="flex items-start gap-3">
-                  <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
-                  <span className="text-sm text-ink/80">Full access to the Working Ledger</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
-                  <span className="text-sm text-ink/80">Goal & rock tracking</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
-                  <span className="text-sm text-ink/80">Weekly diagnostic reviews</span>
-                </li>
-              </ul>
-
-              <button
-                onClick={() => { setSelectedPlan("monthly"); setCheckoutStep(2); }}
-                className="w-full border-2 border-ink text-ink py-4 text-[10px] font-bold uppercase tracking-widest hover:bg-ink hover:text-paper transition-colors"
-              >
-                Select Monthly Plan
-              </button>
+          {/* Yearly Plan */}
+          <div className="border-2 border-ochre bg-white p-8 flex flex-col relative shadow-[8px_8px_0px_0px_rgba(30,42,36,0.1)]">
+            <div className="absolute top-0 right-0 bg-ochre text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1 m-4">
+              Save 20%
             </div>
-
-            {/* Yearly Plan */}
-            <div className="border-2 border-ochre bg-white p-8 flex flex-col relative shadow-[8px_8px_0px_0px_rgba(30,42,36,0.1)]">
-              <div className="absolute top-0 right-0 bg-ochre text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1 m-4">
-                Save 20%
+            <div className="text-[10px] font-bold uppercase tracking-widest text-ochre mb-2">Professional</div>
+            <h2 className="text-2xl font-serif font-bold mb-4">Yearly Commitment</h2>
+            <div className="mb-6 flex flex-col">
+              <div className="flex items-end gap-2">
+                <span className="text-4xl font-serif font-bold text-ink">{BASE_YEARLY}</span>
+                <span className="text-sm font-bold text-ink/50 uppercase tracking-widest mb-1">MAD / year</span>
               </div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-ochre mb-2">Professional</div>
-              <h2 className="text-2xl font-serif font-bold mb-4">Yearly Commitment</h2>
-              <div className="mb-6 flex flex-col">
-                <div className="flex items-end gap-2">
-                  <span className="text-4xl font-serif font-bold text-ink">{BASE_YEARLY}</span>
-                  <span className="text-sm font-bold text-ink/50 uppercase tracking-widest mb-1">MAD / year</span>
-                </div>
-                <span className="text-xs text-ink/40 line-through mt-1">540 MAD</span>
-              </div>
-              
-              <ul className="space-y-3 mb-10 flex-1">
-                <li className="flex items-start gap-3">
-                  <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
-                  <span className="text-sm text-ink/80">Full access to the Working Ledger</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
-                  <span className="text-sm text-ink/80">Goal & rock tracking</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
-                  <span className="text-sm text-ink/80">Weekly diagnostic reviews</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
-                  <span className="text-sm font-bold text-ink">Locked-in 20% discount</span>
-                </li>
-              </ul>
-
-              <button
-                onClick={() => { setSelectedPlan("yearly"); setCheckoutStep(2); }}
-                className="w-full bg-ink text-paper py-4 text-[10px] font-bold uppercase tracking-widest hover:bg-ink/80 transition-colors"
-              >
-                Select Yearly Plan
-              </button>
+              <span className="text-xs text-ink/40 line-through mt-1">540 MAD</span>
             </div>
+            
+            <ul className="space-y-3 mb-10 flex-1">
+              <li className="flex items-start gap-3">
+                <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
+                <span className="text-sm text-ink/80">Full access to the Working Ledger</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
+                <span className="text-sm text-ink/80">Goal & rock tracking</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
+                <span className="text-sm text-ink/80">Weekly diagnostic reviews</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check className="w-4 h-4 text-ochre mt-0.5 shrink-0" />
+                <span className="text-sm font-bold text-ink">Locked-in 20% discount</span>
+              </li>
+            </ul>
+
+            <button
+              onClick={() => { setSelectedPlan("yearly"); setCheckoutStep(2); }}
+              className="w-full bg-ink text-paper py-4 text-[10px] font-bold uppercase tracking-widest hover:bg-ink/80 transition-colors"
+            >
+              Select Yearly Plan
+            </button>
           </div>
-        </>
-      )}
-
-      {checkoutStep === 2 && (
+        </div>
+      ) : checkoutStep === 2 ? (
         <div className="max-w-2xl mx-auto">
           <button onClick={() => setCheckoutStep(1)} className="text-[10px] font-bold uppercase tracking-widest text-ink/50 hover:text-ink mb-6">← Back to plans</button>
           
