@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { LayoutDashboard, Settings2, CheckSquare, Target, ClipboardList, Lightbulb, History } from "lucide-react";
+import { LayoutDashboard, Settings2, CheckSquare, Target, ClipboardList, Lightbulb, History, CreditCard } from "lucide-react";
 
 const renderTally = (count) => {
   if (!count || count <= 0) return null;
@@ -114,6 +114,7 @@ export function LedgerSidebar({ children }) {
     { label: "Review", href: "/reviews", shortcut: "v", tally: 1, icon: ClipboardList },
     { label: "Insights", href: "/insights", shortcut: "k", icon: Lightbulb },
     { label: "History", href: "/history", shortcut: "h", icon: History },
+    { label: "Billing", href: "/billing", shortcut: "b", icon: CreditCard },
   ];
 
   const isReviewContext = pathname?.includes("/reviews");
