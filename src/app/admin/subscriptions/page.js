@@ -92,26 +92,27 @@ export default function AdminSubscriptionsPage() {
                     </td>
                     <td className="p-4">
                       <span className="text-xs font-bold uppercase tracking-widest text-ink">
-                        {user.subscription_plan || "None"}
+                        {user.is_admin ? "LIFETIME (ADMIN)" : (user.subscription_plan || "None")}
                       </span>
                     </td>
                     <td className="p-4">
                       <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${
+                        user.is_admin ? 'bg-ink text-paper border-ink' :
                         user.subscription_status === 'active' ? 'bg-moss/10 text-moss border-moss/20' :
                         user.subscription_status === 'pending_payment' ? 'bg-ochre/10 text-ochre border-ochre/20' :
                         'bg-ink/5 text-ink/50 border-ink/10'
                       }`}>
-                        {user.subscription_status || "Inactive"}
+                        {user.is_admin ? "ADMIN" : (user.subscription_status || "Inactive")}
                       </span>
                     </td>
                     <td className="p-4">
                       <div className="text-xs font-mono text-ink/70">
-                        {user.subscription_end_date ? new Date(user.subscription_end_date).toLocaleDateString() : "—"}
+                        {user.is_admin ? "Never Expires" : (user.subscription_end_date ? new Date(user.subscription_end_date).toLocaleDateString() : "—")}
                       </div>
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex justify-end gap-2">
-                        {user.subscription_status !== 'active' && (
+                        {!user.is_admin && user.subscription_status !== 'active' && (
                            <>
                              <button 
                                onClick={() => handleUpdateStatus(user.user_id, "active", user.subscription_plan || "monthly", 1)}
@@ -127,7 +128,7 @@ export default function AdminSubscriptionsPage() {
                              </button>
                            </>
                         )}
-                        {user.subscription_status === 'active' && (
+                        {!user.is_admin && user.subscription_status === 'active' && (
                            <button 
                              onClick={() => handleUpdateStatus(user.user_id, "inactive", null, 0)}
                              className="px-3 py-1 border border-ink text-ink text-[10px] font-bold uppercase tracking-widest hover:bg-ink hover:text-paper transition-colors"
