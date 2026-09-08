@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Check, Upload, CheckCircle2 } from "lucide-react";
@@ -211,7 +211,7 @@ export default function BillingPage() {
           onClick={handleMakeAdmin}
           className="absolute -top-6 right-0 text-[10px] bg-ink text-paper px-3 py-1 uppercase tracking-widest font-bold"
         >
-          🛠️ Force Admin Access (Dev)
+          ðŸ› ï¸ Force Admin Access (Dev)
         </button>
 
         <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4 uppercase tracking-tight">
@@ -222,7 +222,7 @@ export default function BillingPage() {
         </p>
       </div>
 
-      {isActive && (
+      {isActive ? (
         <div className="border border-divider bg-white p-8 mb-16 max-w-2xl mx-auto">
           <div className="flex justify-between items-start mb-6">
             <div>
@@ -246,7 +246,7 @@ export default function BillingPage() {
              <div>
                <div className="text-xs text-ink/70 mb-1">Expiration Date</div>
                <div className="font-mono text-sm font-bold text-ink">
-                 {profile?.is_admin ? "Never Expires" : (profile?.subscription_end_date ? new Date(profile.subscription_end_date).toLocaleDateString() : "—")}
+                 {profile?.is_admin ? "Never Expires" : (profile?.subscription_end_date ? new Date(profile.subscription_end_date).toLocaleDateString() : "â€”")}
                </div>
              </div>
              
@@ -257,9 +257,7 @@ export default function BillingPage() {
              )}
           </div>
         </div>
-      )}
-      
-      {!isActive && checkoutStep === 1 && (
+      ) : checkoutStep === 1 ? (
         <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto mb-16">
           {/* Monthly Plan */}
           <div className="border border-divider bg-paper p-8 flex flex-col relative">
@@ -335,11 +333,9 @@ export default function BillingPage() {
             </button>
           </div>
         </div>
-      )}
-
-      {!isActive && checkoutStep === 2 && (
+      ) : checkoutStep === 2 ? (
         <div className="max-w-2xl mx-auto">
-          <button onClick={() => setCheckoutStep(1)} className="text-[10px] font-bold uppercase tracking-widest text-ink/50 hover:text-ink mb-6">← Back to plans</button>
+          <button onClick={() => setCheckoutStep(1)} className="text-[10px] font-bold uppercase tracking-widest text-ink/50 hover:text-ink mb-6">â† Back to plans</button>
           
           <h2 className="text-3xl font-serif font-bold mb-6 uppercase tracking-tight">Complete Payment</h2>
           
@@ -481,7 +477,7 @@ export default function BillingPage() {
       )}
 
       {/* Payment History Table */}
-      {(isActive || checkoutStep === 1) && payments.length > 0 && (
+      {checkoutStep === 1 && payments.length > 0 && (
         <div className="mt-24 max-w-4xl mx-auto">
           <h3 className="text-sm font-bold uppercase tracking-widest text-ink mb-4">Payment History</h3>
           <div className="bg-white border border-divider overflow-x-auto">
