@@ -27,6 +27,9 @@ export default function BillingPage() {
 
   useEffect(() => {
     fetchPayments();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) setCurrentUser(data.user.email);
+    });
   }, []);
 
   const fetchPayments = async () => {
@@ -169,6 +172,13 @@ export default function BillingPage() {
     setTransactionId("");
   };
 
+  const [currentUser, setCurrentUser] = useState(null);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  };
+
   const handleMakeAdmin = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -186,11 +196,11 @@ export default function BillingPage() {
       // Verify
       const { data: profile } = await supabase.from("profiles").select("is_admin, subscription_status").eq("user_id", user.id).single();
       if (!profile?.is_admin) {
-         alert("Warning: Database did not save the admin state. Please run the SQL migration in Supabase.");
+         alert(`Warning: Database did not save the admin state for ${user.email}. Please run the SQL migration in Supabase.`);
          return;
       }
 
-      alert("Success! Profile verified as Admin. Redirecting to dashboard...");
+      alert(`Success! Profile for ${user.email} verified as Admin. Redirecting to dashboard...`);
       window.location.href = "/dashboard";
     } catch (err) {
       alert("Error making admin: " + err.message);
@@ -203,6 +213,11 @@ export default function BillingPage() {
       {checkoutStep === 1 && (
         <>
           <div className="text-center mb-16 relative">
+            <div className="absolute -top-6 left-0 text-xs text-ink/50 font-mono">
+              Logged in as: <strong>{currentUser || 'Loading...'}</strong>
+              <button onClick={handleLogout} className="ml-4 underline hover:text-ink">Sign Out</button>
+            </div>
+
             {/* Hidden Dev Button */}
             <button 
               onClick={handleMakeAdmin}
