@@ -34,7 +34,9 @@ export default function BillingGuard({ children }) {
           .eq("user_id", user.id)
           .single();
 
-        if (profile?.is_admin) {
+        const isSuperAdmin = user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+
+        if (isSuperAdmin || profile?.is_admin) {
           setHasAccess(true);
         } else if (profile?.subscription_status === "active") {
           // Check if it's expired

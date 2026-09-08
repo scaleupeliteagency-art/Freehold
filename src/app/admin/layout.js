@@ -25,7 +25,9 @@ export default function AdminLayout({ children }) {
         .eq("user_id", user.id)
         .single();
         
-      if (profile?.is_admin) {
+      const isSuperAdmin = user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+        
+      if (isSuperAdmin || profile?.is_admin) {
         setIsAdmin(true);
       } else {
         router.push("/dashboard");
