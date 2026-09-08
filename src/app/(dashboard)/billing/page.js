@@ -174,11 +174,26 @@ export default function BillingPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       
-      await supabase.from("profiles").update({ is_admin: true, subscription_status: 'active' }).eq("user_id", user.id);
-      alert("Success! You are now an Admin. Redirecting to dashboard...");
+      // Try to select first
+      const { data: existingProfile } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
+      
+      if (existingProfile) {
+        await supabase.from("profiles").update({ is_admin: true, subscription_status: 'active' }).eq("user_id", user.id);
+      } else {
+        await supabase.from("profiles").insert([{ user_id: user.id, is_admin: true, subscription_status: 'active', name: 'Admin User' }]);
+      }
+      
+      // Verify
+      const { data: profile } = await supabase.from("profiles").select("is_admin, subscription_status").eq("user_id", user.id).single();
+      if (!profile?.is_admin) {
+         alert("Warning: Database did not save the admin state. Please run the SQL migration in Supabase.");
+         return;
+      }
+
+      alert("Success! Profile verified as Admin. Redirecting to dashboard...");
       window.location.href = "/dashboard";
     } catch (err) {
-      alert("Error making admin");
+      alert("Error making admin: " + err.message);
     }
   };
 
