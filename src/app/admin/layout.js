@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Users, CreditCard } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, Tag } from "lucide-react";
 
 export default function AdminLayout({ children }) {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -53,8 +53,16 @@ export default function AdminLayout({ children }) {
         
         <nav className="flex flex-col gap-2 flex-1">
           <Link href="/admin/subscriptions" className="flex items-center gap-3 px-3 py-2 text-sm font-semibold text-ink bg-paper border border-divider">
+            <Users size={16} className="text-ochre" />
+            Users & Subs
+          </Link>
+          <Link href="/admin/payments" className="flex items-center gap-3 px-3 py-2 text-sm font-semibold text-ink bg-paper border border-divider">
             <CreditCard size={16} className="text-ochre" />
-            Subscriptions
+            Payments
+          </Link>
+          <Link href="/admin/promos" className="flex items-center gap-3 px-3 py-2 text-sm font-semibold text-ink bg-paper border border-divider">
+            <Tag size={16} className="text-ochre" />
+            Promo Codes
           </Link>
           <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2 text-sm font-semibold text-ink/50 hover:text-ink transition-colors mt-auto">
             <LayoutDashboard size={16} />
