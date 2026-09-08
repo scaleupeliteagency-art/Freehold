@@ -1,7 +1,12 @@
 "use client";
 
 import { LedgerSidebar } from "@/components/layout/LedgerSidebar";
+import BillingGuard from "@/components/auth/BillingGuard";
 
 export default function DashboardLayout({ children }) {
-  return <LedgerSidebar>{children}</LedgerSidebar>;
+  return (
+    <BillingGuard>
+      <LedgerSidebar>{children}</LedgerSidebar>
+    </BillingGuard>
+  );
 }
