@@ -169,12 +169,33 @@ export default function BillingPage() {
     setTransactionId("");
   };
 
+  const handleMakeAdmin = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      await supabase.from("profiles").update({ is_admin: true, subscription_status: 'active' }).eq("user_id", user.id);
+      alert("Success! You are now an Admin. Redirecting to dashboard...");
+      window.location.href = "/dashboard";
+    } catch (err) {
+      alert("Error making admin");
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-12 px-6 animate-in fade-in duration-500 text-ink">
       
       {checkoutStep === 1 && (
         <>
-          <div className="text-center mb-16">
+          <div className="text-center mb-16 relative">
+            {/* Hidden Dev Button */}
+            <button 
+              onClick={handleMakeAdmin}
+              className="absolute -top-6 right-0 text-[10px] bg-ink text-paper px-3 py-1 uppercase tracking-widest font-bold"
+            >
+              🛠️ Force Admin Access (Dev)
+            </button>
+
             <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4 uppercase tracking-tight">Activate Your Ledger</h1>
             <p className="text-lg text-ink/70 max-w-2xl mx-auto">
               Choose a plan to continue accessing your system. Built for serious execution.
