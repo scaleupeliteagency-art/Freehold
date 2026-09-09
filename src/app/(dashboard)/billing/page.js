@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Check, CheckCircle2, ChevronDown, FileCheck2, ImagePlus, LockKeyhole, QrCode, ShieldCheck, Upload, WalletCards } from "lucide-react";
+import { Check, CheckCircle2, ChevronDown, FileCheck2, ImagePlus, LockKeyhole, ShieldCheck, Upload, WalletCards } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
@@ -41,12 +41,6 @@ export default function BillingPage() {
     rib: process.env.NEXT_PUBLIC_BANK_RIB || "007395000984530040029175",
     bank: process.env.NEXT_PUBLIC_BANK_NAME || "SIMPLE BY ATTIJARYWAFABANK"
   };
-  const BINANCE_DETAILS = {
-    id: process.env.NEXT_PUBLIC_BINANCE_PAY_ID || "Configure NEXT_PUBLIC_BINANCE_PAY_ID",
-    wallet: process.env.NEXT_PUBLIC_BINANCE_WALLET || "Configure NEXT_PUBLIC_BINANCE_WALLET",
-    network: process.env.NEXT_PUBLIC_BINANCE_NETWORK || "USDT"
-  };
-
   useEffect(() => {
     fetchPayments();
     supabase.auth.getUser().then(({ data }) => {
@@ -61,13 +55,9 @@ export default function BillingPage() {
 
   useEffect(() => {
     if (checkoutStep !== 2 || paymentMethod !== "paypal" || getFinalPrice(selectedPlan || "monthly") === 0) return;
-    const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-    if (!clientId) {
-      setPaypalError("PayPal is not configured yet. Add NEXT_PUBLIC_PAYPAL_CLIENT_ID to enable it.");
-      return;
-    }
 
-    const renderButtons = () => {
+    let cancelled = false;
+    const renderButtons = (clientId, paypalCurrency) => {
       if (!window.paypal || !paypalContainerRef.current) return;
       paypalContainerRef.current.innerHTML = "";
       window.paypal.Buttons({
@@ -76,7 +66,7 @@ export default function BillingPage() {
           const response = await fetch("/api/paypal/create-order", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ plan: selectedPlan || "monthly", amount: getFinalPrice(selectedPlan || "monthly"), currency: PAYPAL_CURRENCY })
+            body: JSON.stringify({ plan: selectedPlan || "monthly", amount: getFinalPrice(selectedPlan || "monthly"), currency: paypalCurrency })
           });
           const result = await response.json();
           if (!response.ok) throw new Error(result.error || "Unable to start PayPal checkout.");
@@ -89,7 +79,7 @@ export default function BillingPage() {
             const response = await fetch("/api/paypal/capture-order", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ orderId: data.orderID, plan: selectedPlan || "monthly", amount: getFinalPrice(selectedPlan || "monthly"), currency: PAYPAL_CURRENCY })
+              body: JSON.stringify({ orderId: data.orderID, plan: selectedPlan || "monthly", amount: getFinalPrice(selectedPlan || "monthly"), currency: paypalCurrency })
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || "PayPal payment could not be captured.");
@@ -128,18 +118,37 @@ export default function BillingPage() {
       setPaypalReady(true);
     };
 
-    const existingScript = document.getElementById("paypal-checkout-sdk");
-    if (existingScript) {
-      renderButtons();
-      return;
-    }
-    const script = document.createElement("script");
-    script.id = "paypal-checkout-sdk";
-    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=${PAYPAL_CURRENCY}&intent=capture`;
-    script.onload = renderButtons;
-    script.onerror = () => setPaypalError("Unable to load PayPal. Check your client ID and network connection.");
-    document.body.appendChild(script);
+    const loadPayPal = async () => {
+      try {
+        const configResponse = await fetch("/api/paypal/config");
+        const config = await configResponse.json();
+        if (!configResponse.ok || !config.clientId) {
+          setPaypalError("PayPal is not configured yet. Add PAYPAL_CLIENT_ID in Vercel.");
+          return;
+        }
+        if (cancelled) return;
+
+        const paypalCurrency = config.currency || PAYPAL_CURRENCY;
+        const existingScript = document.getElementById("paypal-checkout-sdk");
+        if (existingScript) {
+          if (window.paypal) renderButtons(config.clientId, paypalCurrency);
+          return;
+        }
+
+        const script = document.createElement("script");
+        script.id = "paypal-checkout-sdk";
+        script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(config.clientId)}&currency=${paypalCurrency}&intent=capture`;
+        script.onload = () => renderButtons(config.clientId, paypalCurrency);
+        script.onerror = () => setPaypalError("Unable to load PayPal. Check your client ID and network connection.");
+        document.body.appendChild(script);
+      } catch {
+        setPaypalError("Unable to load PayPal configuration.");
+      }
+    };
+
+    loadPayPal();
     return () => {
+      cancelled = true;
       if (paypalContainerRef.current) paypalContainerRef.current.innerHTML = "";
       setPaypalReady(false);
     };
@@ -300,7 +309,6 @@ export default function BillingPage() {
 
   const qrUrl = (data) => `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(data)}`;
   const bankQrData = `Bank: ${BANK_DETAILS.bank}\nHolder: ${BANK_DETAILS.holder}\nRIB: ${BANK_DETAILS.rib}`;
-  const binanceQrData = `Binance Pay ID: ${BINANCE_DETAILS.id}\nWallet: ${BINANCE_DETAILS.wallet}\nNetwork: ${BINANCE_DETAILS.network}`;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -501,7 +509,7 @@ export default function BillingPage() {
 
             <section className="p-6 md:p-10">
               {!isFreeCheckout && <div className="flex gap-1 border-b border-divider mb-8">
-                {[{ id: "bank_transfer", label: "Bank transfer", icon: WalletCards }, { id: "paypal", label: "PayPal", icon: WalletCards }, { id: "binance", label: "Binance", icon: QrCode }].map(({ id, label, icon: Icon }) => (
+                {[{ id: "bank_transfer", label: "Bank transfer", icon: WalletCards }, { id: "paypal", label: "PayPal", icon: WalletCards }].map(({ id, label, icon: Icon }) => (
                   <button key={id} onClick={() => setPaymentMethod(id)} className={`flex-1 flex items-center justify-center gap-2 py-4 text-[10px] font-bold uppercase tracking-widest border-b-2 transition-colors ${paymentMethod === id ? "border-ochre text-ink" : "border-transparent text-ink/40 hover:text-ink"}`}><Icon size={15} /> {label}</button>
                 ))}
               </div>}
@@ -519,12 +527,6 @@ export default function BillingPage() {
                     <div className="flex-1 space-y-3 text-xs"><p className="text-[10px] font-bold uppercase tracking-widest text-ink/50">Transfer details</p>{[["Bank", BANK_DETAILS.bank], ["Account holder", BANK_DETAILS.holder], ["RIB", BANK_DETAILS.rib]].map(([label, value]) => <div key={label} className="flex justify-between gap-4 border-b border-divider py-2"><span className="text-ink/50">{label}</span><span className="font-mono text-right select-all">{value}</span></div>)}</div>
                     <div className="border border-divider p-3 self-start"><img src={qrUrl(bankQrData)} alt="QR code with bank transfer details" className="w-36 h-36" /><p className="text-[9px] text-center uppercase tracking-widest text-ink/50 mt-2">Scan to copy details</p></div>
                   </div>
-                </div>
-              )}
-
-              {!isFreeCheckout && paymentMethod === "binance" && (
-                <div className="animate-in fade-in duration-300 mb-8">
-                  <div className="flex flex-col md:flex-row gap-6"><div className="flex-1 space-y-3 text-xs"><p className="text-[10px] font-bold uppercase tracking-widest text-ink/50">Binance Pay details</p>{[["Pay ID", BINANCE_DETAILS.id], ["Wallet", BINANCE_DETAILS.wallet], ["Network", BINANCE_DETAILS.network]].map(([label, value]) => <div key={label} className="flex justify-between gap-4 border-b border-divider py-2"><span className="text-ink/50">{label}</span><span className="font-mono text-right select-all break-all">{value}</span></div>)}</div><div className="border border-divider p-3 self-start"><img src={qrUrl(binanceQrData)} alt="QR code with Binance payment details" className="w-36 h-36" /><p className="text-[9px] text-center uppercase tracking-widest text-ink/50 mt-2">Scan to pay</p></div></div>
                 </div>
               )}
 
