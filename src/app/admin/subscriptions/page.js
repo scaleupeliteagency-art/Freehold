@@ -6,18 +6,20 @@ import { supabase } from "@/lib/supabase/client";
 export default function AdminSubscriptionsPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   const fetchUsers = async () => {
     setLoading(true);
-    // Because we added an RLS policy that lets admins select all from profiles,
-    // this will return all users for the admin.
+    setLoadError("");
     const { data, error } = await supabase
       .from("profiles")
-      .select("*")
+      .select("user_id, name, subscription_plan, subscription_status, subscription_end_date, is_admin, created_at")
       .order("created_at", { ascending: false });
       
     if (error) {
       console.error(error);
+      setLoadError(error.message);
+      setUsers([]);
     } else {
       setUsers(data || []);
     }
@@ -60,12 +62,18 @@ export default function AdminSubscriptionsPage() {
         <p className="text-sm text-ink/70">Manage client billing, activate plans, and monitor access.</p>
       </div>
 
+      {loadError && (
+        <div className="mb-6 border border-red-300 bg-red-50 p-4 text-sm text-red-700">
+          Unable to load subscription data from Supabase: {loadError}
+        </div>
+      )}
+
       <div className="bg-white border border-divider overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-divider bg-paper text-[10px] uppercase tracking-widest text-ink/50">
-                <th className="p-4 font-bold">User / Email</th>
+                <th className="p-4 font-bold">User / ID</th>
                 <th className="p-4 font-bold">Current Plan</th>
                 <th className="p-4 font-bold">Status</th>
                 <th className="p-4 font-bold">Expiry Date</th>
@@ -85,9 +93,7 @@ export default function AdminSubscriptionsPage() {
                 users.map(user => (
                   <tr key={user.user_id} className="border-b border-divider hover:bg-paper/50 transition-colors">
                     <td className="p-4">
-                      <div className="font-bold text-sm text-ink">{user.full_name || "Unknown Name"}</div>
-                      {/* Because email isn't in profiles by default, we just show user ID or full name. 
-                          Ideally, email is synced to profiles via trigger, but we use what we have. */}
+                        <div className="font-bold text-sm text-ink">{user.name || "Unnamed User"}</div>
                       <div className="text-[10px] font-mono text-ink/50 mt-1">{user.user_id}</div>
                     </td>
                     <td className="p-4">

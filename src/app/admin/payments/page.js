@@ -6,19 +6,44 @@ import { supabase } from "@/lib/supabase/client";
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   const fetchPayments = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    setLoadError("");
+    const { data: paymentRows, error: paymentError } = await supabase
       .from("payments")
-      .select("*, profiles!user_id(full_name)")
+      .select("*")
       .order("created_at", { ascending: false });
-      
-    if (error) {
-      console.error(error);
-    } else {
-      setPayments(data || []);
+
+    if (paymentError) {
+      console.error(paymentError);
+      setLoadError(paymentError.message);
+      setPayments([]);
+      setLoading(false);
+      return;
     }
+
+    const userIds = [...new Set((paymentRows || []).map((payment) => payment.user_id).filter(Boolean))];
+    let profilesByUserId = {};
+    if (userIds.length > 0) {
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, name")
+        .in("user_id", userIds);
+
+      if (profilesError) {
+        console.error(profilesError);
+        setLoadError(profilesError.message);
+      } else {
+        profilesByUserId = Object.fromEntries((profiles || []).map((profile) => [profile.user_id, profile]));
+      }
+    }
+
+    setPayments((paymentRows || []).map((payment) => ({
+      ...payment,
+      profile: profilesByUserId[payment.user_id] || null
+    })));
     setLoading(false);
   };
 
@@ -70,12 +95,29 @@ export default function AdminPaymentsPage() {
     fetchPayments();
   };
 
+  const handleViewProof = async (proofPath) => {
+    const { data, error } = await supabase.storage
+      .from("payment_proofs")
+      .createSignedUrl(proofPath, 600);
+    if (error || !data?.signedUrl) {
+      alert("Unable to open payment proof: " + (error?.message || "No signed URL returned."));
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="max-w-6xl mx-auto animate-in fade-in duration-500">
       <div className="mb-8">
         <h1 className="text-3xl font-serif font-bold text-ink uppercase mb-2">Payment Verification</h1>
         <p className="text-sm text-ink/70">Verify manual payments and activate subscriptions.</p>
       </div>
+
+      {loadError && (
+        <div className="mb-6 border border-red-300 bg-red-50 p-4 text-sm text-red-700">
+          Unable to load payment data from Supabase: {loadError}
+        </div>
+      )}
 
       <div className="bg-white border border-divider overflow-hidden">
         <div className="overflow-x-auto">
@@ -102,7 +144,7 @@ export default function AdminPaymentsPage() {
                 payments.map(payment => (
                   <tr key={payment.id} className="border-b border-divider hover:bg-paper/50 transition-colors">
                     <td className="p-4">
-                      <div className="font-bold text-sm text-ink">{payment.profiles?.full_name || "Unknown User"}</div>
+                      <div className="font-bold text-sm text-ink">{payment.profile?.name || "Unnamed User"}</div>
                       <div className="text-[10px] font-mono text-ink/50 mt-1">{new Date(payment.created_at).toLocaleString()}</div>
                       <div className="text-[10px] font-mono text-ink/40 mt-1" title={payment.user_id}>UID: {payment.user_id.substring(0, 8)}...</div>
                     </td>
@@ -126,9 +168,9 @@ export default function AdminPaymentsPage() {
                            </span>
                         )}
                         {payment.proof_url ? (
-                           <a href={payment.proof_url} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-ochre hover:underline uppercase tracking-widest">
+                           <button onClick={() => handleViewProof(payment.proof_url)} className="text-[10px] font-bold text-ochre hover:underline uppercase tracking-widest">
                              View Proof ↗
-                           </a>
+                           </button>
                         ) : (
                            <span className="text-[10px] font-mono text-ink/40">No file attached</span>
                         )}
