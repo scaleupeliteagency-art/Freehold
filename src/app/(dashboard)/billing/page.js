@@ -38,8 +38,8 @@ export default function BillingPage() {
   const CURRENCY_SYMBOL = "$";
   const BANK_DETAILS = {
     holder: process.env.NEXT_PUBLIC_BANK_HOLDER || "Working Ledger",
-    rib: process.env.NEXT_PUBLIC_BANK_RIB || "Configure NEXT_PUBLIC_BANK_RIB",
-    bank: process.env.NEXT_PUBLIC_BANK_NAME || "Configure NEXT_PUBLIC_BANK_NAME"
+    rib: process.env.NEXT_PUBLIC_BANK_RIB || "007395000984530040029175",
+    bank: process.env.NEXT_PUBLIC_BANK_NAME || "SIMPLE BY ATTIJARYWAFABANK"
   };
   const BINANCE_DETAILS = {
     id: process.env.NEXT_PUBLIC_BINANCE_PAY_ID || "Configure NEXT_PUBLIC_BINANCE_PAY_ID",
