@@ -122,8 +122,9 @@ export default function BillingPage() {
       try {
         const configResponse = await fetch("/api/paypal/config");
         const config = await configResponse.json();
-        if (!configResponse.ok || !config.clientId) {
-          setPaypalError("PayPal is not configured yet. Add PAYPAL_CLIENT_ID in Vercel.");
+        if (!configResponse.ok || !config.configured || !config.clientId) {
+          const missing = config.missing?.join(", ") || "PayPal environment variables";
+          setPaypalError(`PayPal is not configured yet. Add ${missing} in Vercel.`);
           return;
         }
         if (cancelled) return;

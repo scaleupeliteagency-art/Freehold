@@ -19,12 +19,12 @@ async function getAccessToken() {
 export async function POST(request) {
   try {
     const { amount, currency } = await request.json();
-    if (!amount || !currency || !process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
+    if (!amount || !currency || !process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET || !process.env.PAYPAL_CURRENCY || !process.env.PAYPAL_ENVIRONMENT) {
       return NextResponse.json({ error: "PayPal server configuration is incomplete." }, { status: 400 });
     }
     const paypalCurrency = (process.env.PAYPAL_CURRENCY || "USD").toUpperCase();
     if (currency.toUpperCase() !== paypalCurrency) {
-      return NextResponse.json({ error: `PayPal checkout must use ${paypalCurrency}. Set NEXT_PUBLIC_PAYPAL_CURRENCY to the same value.` }, { status: 400 });
+      return NextResponse.json({ error: `PayPal checkout must use ${paypalCurrency}. Set PAYPAL_CURRENCY to the same value.` }, { status: 400 });
     }
     const accessToken = await getAccessToken();
     const response = await fetch(`${paypalBaseUrl}/v2/checkout/orders`, {

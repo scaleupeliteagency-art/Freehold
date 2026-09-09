@@ -20,6 +20,9 @@ export async function POST(request) {
   try {
     const { orderId } = await request.json();
     if (!orderId) return NextResponse.json({ error: "PayPal order ID is required." }, { status: 400 });
+    if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET || !process.env.PAYPAL_CURRENCY || !process.env.PAYPAL_ENVIRONMENT) {
+      return NextResponse.json({ error: "PayPal server configuration is incomplete." }, { status: 400 });
+    }
     const accessToken = await getAccessToken();
     const response = await fetch(`${paypalBaseUrl}/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {
       method: "POST",
