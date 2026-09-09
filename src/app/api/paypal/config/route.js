@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 export function GET() {
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
@@ -16,5 +18,7 @@ export function GET() {
       !currency && "PAYPAL_CURRENCY",
       !environment && "PAYPAL_ENVIRONMENT"
     ].filter(Boolean)
+  }, {
+    headers: { "Cache-Control": "no-store" }
   });
 }
