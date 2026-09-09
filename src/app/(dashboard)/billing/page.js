@@ -33,13 +33,12 @@ export default function BillingPage() {
 
   const BASE_MONTHLY = 5;
   const BASE_YEARLY = 47;
-  const CURRENCY = process.env.NEXT_PUBLIC_BILLING_CURRENCY || "MAD";
+  const CURRENCY = "USD";
   const PAYPAL_CURRENCY = process.env.NEXT_PUBLIC_PAYPAL_CURRENCY || "USD";
-  const CURRENCY_SYMBOL = CURRENCY === "USD" ? "$" : CURRENCY;
+  const CURRENCY_SYMBOL = "$";
   const BANK_DETAILS = {
     holder: process.env.NEXT_PUBLIC_BANK_HOLDER || "Working Ledger",
     rib: process.env.NEXT_PUBLIC_BANK_RIB || "Configure NEXT_PUBLIC_BANK_RIB",
-    iban: process.env.NEXT_PUBLIC_BANK_IBAN || "Configure NEXT_PUBLIC_BANK_IBAN",
     bank: process.env.NEXT_PUBLIC_BANK_NAME || "Configure NEXT_PUBLIC_BANK_NAME"
   };
   const BINANCE_DETAILS = {
@@ -300,31 +299,12 @@ export default function BillingPage() {
   };
 
   const qrUrl = (data) => `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(data)}`;
-  const bankQrData = `Bank: ${BANK_DETAILS.bank}\nHolder: ${BANK_DETAILS.holder}\nIBAN: ${BANK_DETAILS.iban}\nRIB: ${BANK_DETAILS.rib}`;
+  const bankQrData = `Bank: ${BANK_DETAILS.bank}\nHolder: ${BANK_DETAILS.holder}\nRIB: ${BANK_DETAILS.rib}`;
   const binanceQrData = `Binance Pay ID: ${BINANCE_DETAILS.id}\nWallet: ${BINANCE_DETAILS.wallet}\nNetwork: ${BINANCE_DETAILS.network}`;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = "/login";
-  };
-
-  const handleMakeAdmin = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
-      const { data: existingProfile } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
-      if (existingProfile) {
-        await supabase.from("profiles").update({ is_admin: true, subscription_status: 'active' }).eq("user_id", user.id);
-      } else {
-        await supabase.from("profiles").insert([{ user_id: user.id, is_admin: true, subscription_status: 'active', name: 'Admin User' }]);
-      }
-      
-      alert(`Success! Profile for ${user.email} verified as Admin. Redirecting to dashboard...`);
-      window.location.href = "/dashboard";
-    } catch (err) {
-      alert("Error making admin: " + err.message);
-    }
   };
 
   const isActive = profile?.subscription_status === 'active' || profile?.is_admin;
@@ -349,13 +329,6 @@ export default function BillingPage() {
           Logged in as: <strong>{currentUser || 'Loading...'}</strong>
           <button onClick={handleLogout} className="ml-4 underline hover:text-ink">Sign Out</button>
         </div>
-
-        <button 
-          onClick={handleMakeAdmin}
-          className="absolute -top-6 right-0 text-[10px] bg-ink text-paper px-3 py-1 uppercase tracking-widest font-bold"
-        >
-          🛠️ Force Admin Access (Dev)
-        </button>
 
         <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4 uppercase tracking-tight">
            Your Ledger Subscription
@@ -424,7 +397,7 @@ export default function BillingPage() {
                         <tr key={p.id} className="border-b border-divider last:border-0 hover:bg-paper/50">
                           <td className="p-4 text-xs font-mono">{new Date(p.created_at).toLocaleDateString()}</td>
                           <td className="p-4 text-xs font-bold uppercase tracking-widest">{p.plan_type || 'Custom'}</td>
-                          <td className="p-4 text-sm font-serif font-bold">{p.amount} {p.currency}</td>
+                          <td className="p-4 text-sm font-serif font-bold">${Number(p.amount).toFixed(2)} USD</td>
                           <td className="p-4 text-xs font-mono">{p.payment_method.replace('_', ' ')}</td>
                           <td className="p-4">
                             <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${display.style}`}>
@@ -543,7 +516,7 @@ export default function BillingPage() {
               ) : paymentMethod === "bank_transfer" && (
                 <div className="animate-in fade-in duration-300">
                   <div className="flex flex-col md:flex-row gap-6 mb-8">
-                    <div className="flex-1 space-y-3 text-xs"><p className="text-[10px] font-bold uppercase tracking-widest text-ink/50">Transfer details</p>{[["Bank", BANK_DETAILS.bank], ["Account holder", BANK_DETAILS.holder], ["RIB", BANK_DETAILS.rib], ["IBAN", BANK_DETAILS.iban]].map(([label, value]) => <div key={label} className="flex justify-between gap-4 border-b border-divider py-2"><span className="text-ink/50">{label}</span><span className="font-mono text-right select-all">{value}</span></div>)}</div>
+                    <div className="flex-1 space-y-3 text-xs"><p className="text-[10px] font-bold uppercase tracking-widest text-ink/50">Transfer details</p>{[["Bank", BANK_DETAILS.bank], ["Account holder", BANK_DETAILS.holder], ["RIB", BANK_DETAILS.rib]].map(([label, value]) => <div key={label} className="flex justify-between gap-4 border-b border-divider py-2"><span className="text-ink/50">{label}</span><span className="font-mono text-right select-all">{value}</span></div>)}</div>
                     <div className="border border-divider p-3 self-start"><img src={qrUrl(bankQrData)} alt="QR code with bank transfer details" className="w-36 h-36" /><p className="text-[9px] text-center uppercase tracking-widest text-ink/50 mt-2">Scan to copy details</p></div>
                   </div>
                 </div>

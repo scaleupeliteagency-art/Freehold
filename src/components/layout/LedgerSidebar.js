@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { LayoutDashboard, Settings2, CheckSquare, Target, ClipboardList, Lightbulb, History, CreditCard } from "lucide-react";
+import { LayoutDashboard, Settings2, CheckSquare, Target, ClipboardList, Lightbulb, History, CreditCard, UserRound } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
 
 const renderTally = (count) => {
   if (!count || count <= 0) return null;
@@ -31,6 +32,8 @@ export function LedgerSidebar({ children }) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   
   const sidebarRef = useRef(null);
 
@@ -40,6 +43,24 @@ export function LedgerSidebar({ children }) {
     const savedCollapsed = localStorage.getItem("ledger_sidebar_collapsed");
     if (savedWidth) setWidth(parseInt(savedWidth));
     if (savedCollapsed === "true") setIsCollapsed(true);
+  }, []);
+
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      setUserEmail(user.email || "");
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("name")
+        .eq("user_id", user.id)
+        .single();
+      const fallbackName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User";
+      setUserName(profile?.name || fallbackName);
+    };
+
+    loadUserProfile();
   }, []);
 
   useEffect(() => {
@@ -223,16 +244,43 @@ export function LedgerSidebar({ children }) {
         {/* Footer Status & Profile */}
         <div className={`mt-auto border-t border-divider/50 pt-4 pb-6 ${isCollapsed ? 'px-2 flex flex-col items-center' : 'px-8 flex flex-col gap-4'}`}>
           {!isCollapsed && (
-            <div className="flex items-center justify-between w-full p-2 border border-divider hover:bg-white/50 transition-colors">
+            <Link href="/profile" className="flex items-center justify-between w-full p-2 border border-divider hover:border-ochre hover:bg-white/50 transition-colors group">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-ink text-paper flex items-center justify-center font-serif text-sm font-bold">
-                  A
+                  {(userName || userEmail || "U").charAt(0).toUpperCase()}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-ink leading-none">Ayoub</span>
-                  <span className="text-[10px] text-ink/50 font-mono mt-1">Founder</span>
+                  <span className="text-xs font-bold text-ink leading-none truncate max-w-[150px]">{userName || "Loading..."}</span>
                 </div>
               </div>
+              <UserRound size={15} className="text-ink/30 group-hover:text-ochre transition-colors" />
+            </Link>
+          )}
+          {isCollapsed && (
+            <Link
+              href="/profile"
+              className="w-8 h-8 bg-ink text-paper flex items-center justify-center font-serif text-sm font-bold mb-4 cursor-pointer hover:bg-ochre transition-colors"
+              title={`${userName || "User"} profile`}
+            >
+              {(userName || userEmail || "U").charAt(0).toUpperCase()}
+            </Link>
+          )}
+
+          {isCollapsed && (
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                window.location.href = "/login";
+              }}
+              className="text-[10px] font-bold uppercase tracking-widest text-ink/40 hover:text-ochre transition-colors p-2"
+              title="Log out"
+            >
+              OUT
+            </button>
+          )}
+
+          {!isCollapsed && (
+            <div className="flex justify-end -mt-3">
               <button 
                 onClick={async () => {
                   const { supabase } = await import('@/lib/supabase/client');
@@ -245,19 +293,6 @@ export function LedgerSidebar({ children }) {
                 OUT
               </button>
             </div>
-          )}
-          {isCollapsed && (
-            <button 
-              onClick={async () => {
-                const { supabase } = await import('@/lib/supabase/client');
-                await supabase.auth.signOut();
-                window.location.href = '/login';
-              }}
-              className="w-8 h-8 bg-ink text-paper flex items-center justify-center font-serif text-sm font-bold mb-4 cursor-pointer hover:bg-ochre transition-colors" 
-              title="Ayoub (Log out)"
-            >
-              A
-            </button>
           )}
 
           {!isCollapsed ? (
