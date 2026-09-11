@@ -21,11 +21,10 @@ export function useDashboardEngine() {
   useEffect(() => {
     async function loadDashboard() {
       try {
-        // 1. Fetch Active System
         const { data: systems } = await supabase
           .from("systems")
           .select("*")
-          .eq("status", "active")
+          .in("status", ["active", "scheduled"])
           .limit(1);
 
         if (!systems || systems.length === 0) {
@@ -33,7 +32,17 @@ export function useDashboardEngine() {
           return;
         }
 
-        const system = systems[0];
+        let system = systems[0];
+        
+        const now = new Date();
+        const startDate = new Date(system.start_date);
+        startDate.setHours(0,0,0,0);
+        now.setHours(0,0,0,0);
+
+        if (system.status === 'scheduled' && startDate <= now) {
+            await supabase.from("systems").update({ status: 'active' }).eq('id', system.id);
+            system.status = 'active';
+        }
 
         // 2. Fetch North Star Goals
         const { data: goals, error: goalsErr } = await supabase

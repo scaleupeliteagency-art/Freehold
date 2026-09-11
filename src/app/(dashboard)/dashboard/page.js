@@ -60,8 +60,23 @@ export default function DashboardPage() {
 
   return (
     <div className="animate-in fade-in duration-500 max-w-5xl pb-24">
+      {/* SCHEDULED BANNER */}
+      {system.status === "scheduled" && (
+        <div className="mb-10 border-2 border-ochre bg-ochre/10 p-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-ochre mb-2">System Scheduled</div>
+              <h2 className="text-2xl font-serif font-bold uppercase tracking-tight mb-2 text-ink">AWAITING START DATE</h2>
+              <p className="text-sm text-ink/80 max-w-xl leading-relaxed">
+                Your system is scheduled to start on <strong>{new Date(system.start_date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong>. Tracking and execution will begin automatically on that date.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* FROZEN BANNER */}
-      {isFrozen && (
+      {isFrozen && system.status !== "scheduled" && (
         <div className="mb-10 border-2 border-ink bg-ink text-paper p-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -96,10 +111,10 @@ export default function DashboardPage() {
       <RocksLedger rocks={rocks} />
 
       {/* 5 & 6. TODAY'S EXECUTION & PRIORITY */}
-      {isFrozen ? (
+      {(isFrozen || system.status === "scheduled") ? (
         <div className="mb-12 border border-divider p-8 opacity-40 pointer-events-none select-none">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-2">Daily Inputs — Suspended</div>
-          <p className="text-sm text-ink/70">Complete the mandatory weekly review to unlock daily input tracking.</p>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-2">Daily Inputs — {system.status === "scheduled" ? "Scheduled" : "Suspended"}</div>
+          <p className="text-sm text-ink/70">{system.status === "scheduled" ? "Execution will unlock on start date." : "Complete the mandatory weekly review to unlock daily input tracking."}</p>
         </div>
       ) : (
         <TodayLedger inputs={inputs} priority={priority} />

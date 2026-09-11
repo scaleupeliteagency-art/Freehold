@@ -19,7 +19,7 @@ export default function DailyInputsPage() {
         const { data: systems } = await supabase
           .from("systems")
           .select("*")
-          .eq("status", "active")
+          .in("status", ["active", "scheduled"])
           .limit(1);
 
         if (!systems || systems.length === 0) {
@@ -27,7 +27,17 @@ export default function DailyInputsPage() {
           return;
         }
 
-        const activeSystem = systems[0];
+        let activeSystem = systems[0];
+        const now = new Date();
+        const startDate = new Date(activeSystem.start_date);
+        now.setHours(0,0,0,0);
+        startDate.setHours(0,0,0,0);
+
+        if (activeSystem.status === "scheduled" && startDate <= now) {
+          await supabase.from("systems").update({ status: "active" }).eq("id", activeSystem.id);
+          activeSystem.status = "active";
+        }
+
         setSystem(activeSystem);
 
         const { data: inputDefs } = await supabase
@@ -109,6 +119,30 @@ export default function DailyInputsPage() {
         <h2 className="text-2xl font-serif font-bold text-ink mb-4">No Active System</h2>
         <hr className="border-divider mb-8" />
         <p className="text-ink max-w-md">You need an active system to track daily inputs.</p>
+      </div>
+    );
+  }
+
+  if (system.status === "scheduled") {
+    return (
+      <div className="max-w-2xl py-12 animate-in fade-in duration-500">
+        <div className="mb-10 border-2 border-ochre bg-ochre/10 p-8">
+          <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-ochre mb-2">System Scheduled</div>
+          <h2 className="text-2xl font-serif font-bold uppercase tracking-tight mb-2 text-ink">AWAITING START DATE</h2>
+          <p className="text-sm text-ink/80 max-w-xl leading-relaxed mb-4">
+            Your system is scheduled to start on <strong>{new Date(system.start_date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong>. Daily inputs will be unlocked on that day.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-divider pt-6">
+            <div>
+              <h2 className="text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-1">Current Monthly Rock</h2>
+              <p className="text-sm font-medium text-ink">{context.currentRock}</p>
+            </div>
+            <div>
+              <h2 className="text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-1">Current Weekly Milestone</h2>
+              <p className="text-sm font-medium text-ink">{context.currentMilestone}</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

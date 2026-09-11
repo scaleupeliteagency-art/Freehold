@@ -33,12 +33,18 @@ export default function Step6Activation() {
       // 2. Insert new system
       const reviewDate = new Date(startDate);
       reviewDate.setDate(reviewDate.getDate() + 7); // First review due 7 days after start
+      
+      const now = new Date();
+      now.setHours(0,0,0,0);
+      const start = new Date(startDate);
+      start.setHours(0,0,0,0);
+      const initialStatus = start > now ? 'scheduled' : 'active';
 
       const { data: sysData, error: sysErr } = await supabase.from("systems").insert({
         user_id: userId,
         name: systemIdentity.name,
         description: systemIdentity.why,
-        status: 'active',
+        status: initialStatus,
         start_date: new Date(startDate).toISOString(),
         next_review_date: reviewDate.toISOString(),
         is_frozen: false

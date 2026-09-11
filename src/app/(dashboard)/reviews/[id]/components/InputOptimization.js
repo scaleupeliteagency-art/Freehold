@@ -6,11 +6,12 @@ import useReviewEngineStore from "@/lib/store/useReviewEngineStore";
 const ACTIONS = ["Keep as-is", "Increase target", "Decrease target", "Pause", "Remove", "Replace"];
 
 export default function InputOptimization({ onNext, onBack }) {
-  const { reviewContext } = useReviewEngineStore();
+  const { reviewContext, snapshots } = useReviewEngineStore();
   const inputs = reviewContext?.inputs || [];
+  const milestones = snapshots?.milestones || [];
 
   const [decisions, setDecisions] = useState(() =>
-    Object.fromEntries(inputs.map(inp => [inp.id, { action: "Keep as-is", note: "" }]))
+    Object.fromEntries(inputs.map(inp => [inp.id, { action: "Keep as-is", note: "", newTarget: inp.target, newName: inp.name }]))
   );
 
   const updateDecision = (id, field, value) => {
@@ -22,6 +23,8 @@ export default function InputOptimization({ onNext, onBack }) {
 
   const changesCount = Object.values(decisions).filter(d => d.action !== "Keep as-is").length;
 
+  const hit80Percent = milestones.some(m => m.achieved) || inputs.some(inp => (inp.actual / (inp.target || 1)) >= 0.8);
+
   return (
     <div className="animate-in fade-in duration-300">
       <div className="mb-8">
@@ -31,6 +34,15 @@ export default function InputOptimization({ onNext, onBack }) {
           The system inputs should evolve with reality. Review each one based on this week's execution data. Are targets appropriate? Is anything missing or should be removed?
         </p>
       </div>
+
+      {hit80Percent && (
+        <div className="mb-8 border-2 border-moss bg-moss/10 p-6">
+          <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-moss mb-2">Evolution Required</div>
+          <p className="text-sm text-ink font-semibold">
+            You hit over 80% on your execution this week! As you evolve, your inputs should change. Consider redefining them or increasing targets to avoid stagnation.
+          </p>
+        </div>
+      )}
 
       <hr className="border-divider mb-8" />
 
@@ -74,15 +86,41 @@ export default function InputOptimization({ onNext, onBack }) {
                 </div>
 
                 {isChanged && (
-                  <div className="mt-4 pt-4 border-t border-divider">
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-2">Reasoning</label>
-                    <input
-                      type="text"
-                      placeholder="Why this change?"
-                      value={decision.note}
-                      onChange={e => updateDecision(inp.id, "note", e.target.value)}
-                      className="w-full bg-paper border border-divider text-ink text-sm py-2 px-3 focus:outline-none focus:border-ink transition-colors placeholder:text-ink/30"
-                    />
+                  <div className="mt-4 pt-4 border-t border-divider space-y-4">
+                    {["Increase target", "Decrease target", "Replace"].includes(decision.action) && (
+                      <div className="grid grid-cols-2 gap-4">
+                        {decision.action === "Replace" && (
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-2">New Name</label>
+                            <input
+                              type="text"
+                              value={decision.newName}
+                              onChange={e => updateDecision(inp.id, "newName", e.target.value)}
+                              className="w-full bg-paper border border-divider text-ink text-sm py-2 px-3 focus:outline-none focus:border-ink transition-colors"
+                            />
+                          </div>
+                        )}
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-2">New Target</label>
+                          <input
+                            type="number"
+                            value={decision.newTarget}
+                            onChange={e => updateDecision(inp.id, "newTarget", e.target.value)}
+                            className="w-full bg-paper border border-divider text-ink text-sm py-2 px-3 focus:outline-none focus:border-ink transition-colors"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-2">Reasoning</label>
+                      <input
+                        type="text"
+                        placeholder="Why this change?"
+                        value={decision.note}
+                        onChange={e => updateDecision(inp.id, "note", e.target.value)}
+                        className="w-full bg-paper border border-divider text-ink text-sm py-2 px-3 focus:outline-none focus:border-ink transition-colors placeholder:text-ink/30"
+                      />
+                    </div>
                   </div>
                 )}
               </div>
