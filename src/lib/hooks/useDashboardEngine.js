@@ -87,12 +87,12 @@ export function useDashboardEngine() {
 
         // --- CALCULATIONS FOR COMMAND CENTER ---
 
-        const now = new Date();
-        const endOfYear = new Date(now.getFullYear(), 11, 31);
-        const daysRemainingYear = Math.max(0, Math.floor((endOfYear - now) / (1000 * 60 * 60 * 24)));
+        const calculationNow = new Date();
+        const endOfYear = new Date(calculationNow.getFullYear(), 11, 31);
+        const daysRemainingYear = Math.max(0, Math.floor((endOfYear - calculationNow) / (1000 * 60 * 60 * 24)));
         
-        const endOfQuarter = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 0);
-        const daysRemainingQuarter = Math.max(0, Math.floor((endOfQuarter - now) / (1000 * 60 * 60 * 24)));
+        const endOfQuarter = new Date(calculationNow.getFullYear(), Math.floor(calculationNow.getMonth() / 3) * 3 + 3, 0);
+        const daysRemainingQuarter = Math.max(0, Math.floor((endOfQuarter - calculationNow) / (1000 * 60 * 60 * 24)));
 
         // 7. Calculate real health and consistency
         let score = 100;
@@ -101,7 +101,7 @@ export function useDashboardEngine() {
 
         if (inputs && inputs.length > 0) {
           const createdDate = new Date(system.created_at);
-          const daysSinceCreation = Math.max(1, Math.floor((now - createdDate) / (1000 * 60 * 60 * 24)));
+          const daysSinceCreation = Math.max(1, Math.floor((calculationNow - createdDate) / (1000 * 60 * 60 * 24)));
           const daysToCheck = Math.min(30, daysSinceCreation);
 
           const totalExpected = inputs.length * daysToCheck;
