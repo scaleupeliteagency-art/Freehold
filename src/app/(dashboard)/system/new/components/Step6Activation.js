@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import useSystemCreationStore from "@/lib/store/useSystemCreationStore";
 import useToastStore from "@/lib/store/useToastStore";
 import { supabase } from "@/lib/supabase/client";
+import { CheckCircle2 } from "lucide-react";
 
 export default function Step6Activation() {
   const { systemIdentity, goals, roadmap, inputs, resetSystem, setStep } = useSystemCreationStore();
@@ -149,56 +150,56 @@ export default function Step6Activation() {
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 text-left py-12 px-8 bg-paper border border-divider">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 text-left py-10 px-8 bg-white rounded-xl shadow-sm border border-gray-100">
       <div className="mb-8">
-        <h2 className="text-3xl font-serif font-bold mb-4 tracking-tight uppercase text-ink">System is ready for activation</h2>
-        <p className="text-base leading-relaxed max-w-xl mb-8 text-ink/70">
+        <h2 className="text-2xl font-semibold mb-3 text-gray-900">System is ready for activation</h2>
+        <p className="text-sm leading-relaxed max-w-xl mb-8 text-gray-500">
           You are about to lock in your North Star and initialize System Version 1.0. 
           Once activated, this system will become the central engine for your long-term execution.
         </p>
       </div>
 
-      <div className="mb-8 p-6 border border-divider bg-white max-w-lg">
-        <label className="block text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-2">System Start Date</label>
-        <p className="text-xs text-ink/70 mb-4">Set the official date when tracking begins for this system.</p>
+      <div className="mb-8 p-6 rounded-xl border border-gray-200 bg-gray-50 max-w-lg">
+        <label className="block text-sm font-semibold text-gray-900 mb-1">System Start Date</label>
+        <p className="text-sm text-gray-500 mb-4">Set the official date when tracking begins for this system.</p>
         <input 
           type="date" 
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
-          className="w-full bg-paper border border-divider px-4 py-2 font-mono text-sm text-ink outline-none focus:border-ink transition-colors"
+          className="w-full rounded-lg border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white outline-none transition-all text-gray-900"
         />
       </div>
 
-      <hr className="border-divider mb-8" />
+      <hr className="border-gray-100 mb-8" />
 
-      <div className="bg-white border border-divider p-8 max-w-lg mb-12">
-        <ul className="space-y-4 text-sm text-left">
+      <div className="bg-white rounded-xl border border-gray-200 p-8 max-w-lg mb-10 shadow-sm">
+        <ul className="space-y-5 text-sm text-left">
           <li className="flex items-start gap-3">
-            <span className="text-ochre mt-0.5 border border-divider px-1 font-mono text-[10px] leading-tight flex items-center justify-center h-4 w-4">✓</span>
-            <div><strong className="uppercase text-[10px] tracking-widest block text-ink/50 mb-1">North Star</strong> <span className="font-serif text-lg">{goals.primary.name || 'Not defined'}</span></div>
+            <CheckCircle2 className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
+            <div><strong className="text-xs font-semibold text-gray-500 block mb-1">North Star</strong> <span className="font-semibold text-gray-900 text-base">{goals.primary.name || 'Not defined'}</span></div>
           </li>
           <li className="flex items-start gap-3">
-            <span className="text-ochre mt-0.5 border border-divider px-1 font-mono text-[10px] leading-tight flex items-center justify-center h-4 w-4">✓</span>
-            <div><strong className="uppercase text-[10px] tracking-widest block text-ink/50 mb-1">Current Focus</strong> <span className="font-serif text-lg">Year {roadmap.year}, Q{roadmap.quarter}</span></div>
+            <CheckCircle2 className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
+            <div><strong className="text-xs font-semibold text-gray-500 block mb-1">Current Focus</strong> <span className="font-semibold text-gray-900 text-base">Year {roadmap.year}, Q{roadmap.quarter}</span></div>
           </li>
           <li className="flex items-start gap-3">
-            <span className="text-ochre mt-0.5 border border-divider px-1 font-mono text-[10px] leading-tight flex items-center justify-center h-4 w-4">✓</span>
-            <div><strong className="uppercase text-[10px] tracking-widest block text-ink/50 mb-1">Execution</strong> <span className="font-serif text-lg">{roadmap.rocks?.length || 0} Rocks, {roadmap.rocks?.[0]?.milestones?.length || 4} Milestones</span></div>
+            <CheckCircle2 className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
+            <div><strong className="text-xs font-semibold text-gray-500 block mb-1">Execution</strong> <span className="font-semibold text-gray-900 text-base">{roadmap.rocks?.length || 0} Rocks, {roadmap.rocks?.[0]?.milestones?.length || 4} Milestones</span></div>
           </li>
           <li className="flex items-start gap-3">
-            <span className="text-ochre mt-0.5 border border-divider px-1 font-mono text-[10px] leading-tight flex items-center justify-center h-4 w-4">✓</span>
-            <div><strong className="uppercase text-[10px] tracking-widest block text-ink/50 mb-1">Inputs</strong> <span className="font-serif text-lg">{inputs?.length || 0} Daily/Weekly Protocols</span></div>
+            <CheckCircle2 className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
+            <div><strong className="text-xs font-semibold text-gray-500 block mb-1">Inputs</strong> <span className="font-semibold text-gray-900 text-base">{inputs?.length || 0} Daily/Weekly Protocols</span></div>
           </li>
         </ul>
       </div>
 
-      <hr className="border-divider mb-8" />
+      <hr className="border-gray-100 mb-8" />
 
       <div className="flex flex-col items-start gap-4">
         <button 
           onClick={handleActivate}
           disabled={isActivating}
-          className="bg-ink border border-divider text-paper px-12 py-4 text-[10px] font-bold hover:bg-ink/80 transition-all disabled:opacity-50 flex items-center justify-center min-w-[250px] uppercase tracking-widest"
+          className="rounded-lg font-medium px-8 py-3.5 transition-colors bg-orange-600 text-white hover:bg-orange-700 shadow-sm disabled:opacity-50 flex items-center justify-center min-w-[250px]"
         >
           {isActivating ? "Writing to Ledger..." : "Activate System"}
         </button>
@@ -207,7 +208,7 @@ export default function Step6Activation() {
           <button 
             type="button"
             onClick={() => setStep(5)}
-            className="text-[10px] uppercase tracking-widest font-bold text-ink/50 hover:text-ink transition-colors border border-transparent hover:border-divider px-4 py-2"
+            className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors px-4 py-2"
           >
             Wait, I need to change something
           </button>

@@ -60,7 +60,7 @@ export default function InsightDetailView() {
   const Icon = config.icon;
 
   return (
-    <div className="max-w-4xl mx-auto pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="w-full mx-auto pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       <button 
         onClick={() => router.back()}
@@ -95,7 +95,7 @@ export default function InsightDetailView() {
             </div>
           </div>
           
-          <p className="text-lg text-gray-300 leading-relaxed max-w-3xl border-l-2 border-[#B8862E] pl-4">
+          <p className="text-lg text-gray-300 leading-relaxed w-full border-l-2 border-[#B8862E] pl-4">
             "{insight.description}"
           </p>
           

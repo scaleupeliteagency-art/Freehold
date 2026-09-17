@@ -111,7 +111,7 @@ export default function ProfilePage() {
   if (loading) return <div className="text-xs font-mono uppercase tracking-widest text-ink/50 animate-pulse">Loading profile...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
+    <div className="w-full mx-auto animate-in fade-in duration-500">
       <div className="border-b border-divider pb-8 mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-ochre mb-3">Account / Identity</p>
@@ -151,7 +151,7 @@ export default function ProfilePage() {
       )}
 
       {activeTab === "password" && (
-        <form onSubmit={changePassword} className="border border-divider bg-white p-6 md:p-10 max-w-2xl">
+        <form onSubmit={changePassword} className="border border-divider bg-white p-6 md:p-10 w-full">
           <div className="flex items-center gap-3 border-b border-divider pb-5 mb-8"><ShieldCheck size={20} className="text-ochre" /><div><h2 className="text-xl font-serif font-bold">Change password</h2><p className="text-xs text-ink/50 mt-1">Use a password you do not reuse elsewhere.</p></div></div>
           <div className="space-y-5">
             <label className="block"><span className="block text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-2">New password</span><input type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required className="w-full bg-paper border border-divider px-4 py-3 text-sm focus:outline-none focus:border-ink" /></label>

@@ -50,7 +50,7 @@ export default function EvolutionView() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto animate-in fade-in duration-500">
+    <div className="w-full mx-auto animate-in fade-in duration-500">
       
       <div className="mb-16">
         <Link href="/history" className="text-[10px] font-bold uppercase tracking-widest text-ink/50 hover:text-ink transition-colors mb-4 inline-block">

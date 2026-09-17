@@ -1,686 +1,474 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef } from 'react';
-import { motion, useScroll, useTransform, animate, useInView } from 'framer-motion';
-import Link from 'next/link';
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase/client";
 
-/* -------------------------------------------------------------------------- */
-/*                                 COMPONENTS                                 */
-/* -------------------------------------------------------------------------- */
-
-const CinematicBackground = () => {
-  const canvasRef = useRef(null);
+export default function LedgerHomepage() {
+  const [user, setUser] = useState(null);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let animationFrameId;
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) setUser(data.user);
+    });
 
-    const resize = () => {
-      const parent = canvas.parentElement;
-      canvas.width = parent ? parent.clientWidth : window.innerWidth;
-      canvas.height = parent ? parent.clientHeight : window.innerHeight;
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 400);
     };
-    resize();
-    window.addEventListener('resize', resize);
-
-    const hLines = Array.from({ length: 15 }, () => ({
-      y: Math.random() * canvas.height,
-      speed: (Math.random() - 0.5) * 0.5,
-    }));
-    
-    const vLines = Array.from({ length: 20 }, () => ({
-      x: Math.random() * canvas.width,
-      speed: (Math.random() - 0.5) * 0.5,
-    }));
-
-    const nodes = [];
-    for (let i = 0; i < 30; i++) {
-      nodes.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        pulse: Math.random() * Math.PI * 2,
-        speed: 0.02 + Math.random() * 0.03
-      });
-    }
-
-    const draw = () => {
-      const { width, height } = canvas;
-      ctx.clearRect(0, 0, width, height);
-      
-      // Grid
-      ctx.strokeStyle = 'rgba(216, 210, 194, 0.15)'; // #D8D2C2 with opacity
-      ctx.lineWidth = 1;
-      
-      const gridSize = 60;
-      ctx.beginPath();
-      for (let x = 0; x < width; x += gridSize) {
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-      }
-      for (let y = 0; y < height; y += gridSize) {
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-      }
-      ctx.stroke();
-
-      // Traversing Lines
-      ctx.strokeStyle = 'rgba(138, 109, 59, 0.4)'; // #8A6D3B with opacity
-      ctx.beginPath();
-      
-      hLines.forEach(line => {
-        line.y += line.speed;
-        if (line.y > height) line.y = 0;
-        if (line.y < 0) line.y = height;
-        ctx.moveTo(0, line.y);
-        ctx.lineTo(width, line.y);
-      });
-
-      vLines.forEach(line => {
-        line.x += line.speed;
-        if (line.x > width) line.x = 0;
-        if (line.x < 0) line.x = width;
-        ctx.moveTo(line.x, 0);
-        ctx.lineTo(line.x, height);
-      });
-      ctx.stroke();
-
-      // Nodes
-      nodes.forEach(node => {
-        node.pulse += node.speed;
-        const radius = 2 + Math.sin(node.pulse) * 1.5;
-        const opacity = 0.2 + Math.sin(node.pulse) * 0.4;
-        
-        ctx.fillStyle = `rgba(138, 109, 59, ${opacity})`;
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      animationFrameId = requestAnimationFrame(draw);
-    };
-
-    draw();
-
-    return () => {
-      window.removeEventListener('resize', resize);
-      cancelAnimationFrame(animationFrameId);
-    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  return (
-    <canvas 
-      ref={canvasRef} 
-      className="absolute inset-0 z-0 pointer-events-none opacity-30"
-    />
-  );
-};
-
-const Counter = ({ from, to, inView, duration = 2 }) => {
-  const nodeRef = useRef(null);
-
-  useEffect(() => {
-    if (inView) {
-      const controls = animate(from, to, {
-        duration,
-        ease: 'easeOut',
-        onUpdate(value) {
-          if (nodeRef.current) {
-            nodeRef.current.textContent = Math.floor(value);
-          }
-        },
-      });
-      return () => controls.stop();
-    }
-  }, [from, to, inView, duration]);
-
-  return <span ref={nodeRef}>{from}</span>;
-};
-
-const LedgerLine = () => {
-  const { scrollYProgress } = useScroll();
-  return (
-    <motion.div 
-      className="fixed top-[65px] left-0 h-[2px] bg-[#8A6D3B] z-[60] origin-left"
-      style={{ scaleX: scrollYProgress }}
-    />
-  );
-};
-
-const Nav = () => (
-  <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-[#F6F3EC] border-b border-[#D8D2C2]">
-    <div className="flex items-center gap-4">
-      <img src="/assets/logo.png" alt="Logo" className="w-[100px] h-[100px] grayscale object-contain" />
-    </div>
-    <div className="flex items-center gap-6">
-      <Link href="/login" className="text-[10px] font-bold uppercase tracking-widest text-[#1E2A24] hover:text-[#8A6D3B] transition-colors">
-        Log in
-      </Link>
-      <Link href="/signup" className="bg-[#1E2A24] text-[#F6F3EC] px-6 py-2 text-[10px] uppercase font-bold tracking-widest hover:bg-[#3F5A48] transition-colors rounded-none">
-        BUILD YOUR SYSTEM →
-      </Link>
-    </div>
-  </nav>
-);
-
-const Hero = () => {
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.15, delayChildren: 0.3 }
-    }
-  };
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
-  };
-
-  const diagramNodes = ["GOAL", "YEAR", "QUARTER", "ROCK", "MILESTONES", "DAILY INPUTS", "RESULTS"];
-
-  return (
-    <section className="relative min-h-screen pt-32 pb-20 px-6 flex flex-col justify-center bg-[#F6F3EC] overflow-hidden">
-      <CinematicBackground />
-      <div className="relative z-10 max-w-5xl mx-auto w-full">
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="text-[#8A6D3B] font-mono text-[10px] tracking-widest uppercase mb-8">
-          A PERSONAL OPERATING SYSTEM
-        </motion.p>
-        <motion.h1 
-          variants={container} 
-          initial="hidden" 
-          animate="show"
-          className="text-5xl md:text-7xl font-serif text-[#1E2A24] leading-tight mb-8 uppercase"
-        >
-          {["BUILD THE SYSTEM.", "THEN LET REALITY", "IMPROVE IT."].map((line, i) => (
-            <motion.div key={i} variants={item} className="overflow-hidden">
-              <span>{line}</span>
-            </motion.div>
-          ))}
-        </motion.h1>
-        <motion.p variants={item} initial="hidden" animate="show" className="text-xl font-serif text-[#3F5A48] mb-20 max-w-2xl">
-          Turn goals into structure. Then turn structure into execution.
-        </motion.p>
-        
-        {/* Living architectural diagram */}
-        <motion.div 
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 1 }}
-          className="flex flex-col md:flex-row items-start md:items-center w-full font-mono text-[10px] uppercase tracking-widest border border-[#D8D2C2] p-6 relative bg-white"
-        >
-          {diagramNodes.map((node, i) => (
-            <React.Fragment key={node}>
-              <div className="flex-shrink-0 text-[#1E2A24] py-2 md:py-0">{node}</div>
-              {i < diagramNodes.length - 1 && (
-                <div className="hidden md:block flex-grow h-[1px] bg-[#D8D2C2] mx-4 overflow-hidden relative">
-                   <motion.div 
-                     initial={{ x: '-100%' }} animate={{ x: '100%' }} transition={{ repeat: Infinity, duration: 2, delay: i * 0.2, ease: 'linear' }}
-                     className="absolute inset-0 bg-[#8A6D3B] w-1/4"
-                   />
-                </div>
-              )}
-              {i < diagramNodes.length - 1 && (
-                 <div className="md:hidden h-6 w-[1px] bg-[#D8D2C2] ml-4" />
-              )}
-            </React.Fragment>
-          ))}
-        </motion.div>
+  const Section = ({ num, title, children, alternate = false, id = "" }) => (
+    <section id={id} className={`relative border-t border-gray-200 py-24 md:py-32 ${alternate ? 'bg-gray-50' : 'bg-white'}`}>
+      <div className="absolute top-0 left-0 px-6 py-2 md:px-12 flex items-center gap-2 font-mono text-[10px] md:text-xs text-gray-400 tracking-widest">
+        <span>{num}</span>
+        <span className="text-gray-200">/</span>
+        <span className="text-gray-900 font-semibold">{title}</span>
+      </div>
+      <div className="max-w-[1200px] mx-auto px-6">
+        {children}
       </div>
     </section>
   );
-};
-
-const OneSystem = () => {
-  const words = ["Goals", "Tasks", "Metrics", "Notes", "Habits", "Plans"];
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: false, amount: 0.5 });
 
   return (
-    <section ref={ref} className="py-32 px-6 bg-[#F6F3EC]">
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-3xl font-serif text-[#1E2A24] mb-24 text-center uppercase">ONE SYSTEM. NOT TEN DISCONNECTED HABITS.</h2>
-        <div className="relative h-72 border border-[#D8D2C2] overflow-hidden flex items-center justify-center p-8 bg-white">
-          <div className="flex gap-6 flex-wrap justify-center relative w-full z-10">
-            {words.map((word, i) => {
-              const randomX = (i % 2 === 0 ? 1 : -1) * (50 + i * 20);
-              const randomY = (i % 3 === 0 ? 1 : -1) * (40 + i * 15);
-              
-              return (
-                <motion.div
-                  key={word}
-                  initial={{ x: randomX, y: randomY, opacity: 0, rotate: (i-3)*10 }}
-                  animate={isInView ? { x: 0, y: 0, opacity: 1, rotate: 0 } : { x: randomX, y: randomY, opacity: 0, rotate: (i-3)*10 }}
-                  transition={{ duration: 0.8, type: "spring", bounce: 0.4, delay: i * 0.1 }}
-                  className="border border-[#1E2A24] px-6 py-3 text-sm font-mono uppercase tracking-widest text-[#1E2A24] bg-[#F6F3EC] rounded-none"
-                >
-                  {word}
-                </motion.div>
-              );
-            })}
+    <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-orange-100 selection:text-orange-900">
+      
+      {/* STICKY HEADER */}
+      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 border-b border-gray-200 backdrop-blur-xl bg-white/80 ${scrolled ? 'translate-y-0 shadow-sm' : '-translate-y-full border-transparent'}`}>
+        <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="font-bold text-lg tracking-tight flex items-center gap-2">
+            <img src="/assets/logo.png" alt="Working Ledger" className="h-6 w-auto" />
           </div>
-          {/* Alignment line */}
-          <motion.div 
-            initial={{ scaleX: 0 }}
-            animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
-            transition={{ duration: 1, delay: 0.8 }}
-            className="absolute top-1/2 left-0 right-0 h-[1px] bg-[#8A6D3B] origin-left z-0 opacity-50"
-          />
+          <Link href={user ? "/dashboard" : "/signup"} className="px-5 py-2 text-white bg-orange-600 hover:bg-orange-700 shadow-[0_4px_14px_0_rgba(234,88,12,0.39)] hover:shadow-[0_6px_20px_rgba(234,88,12,0.23)] hover:-translate-y-0.5 text-sm font-bold rounded-md transition-all">
+            {user ? "Open Dashboard" : "Initialize Your System →"}
+          </Link>
         </div>
-      </div>
-    </section>
-  );
-};
+      </nav>
 
-const Structure = () => {
-  const steps = ["GOAL", "YEAR", "QUARTER", "ROCK", "MILESTONE", "DAILY INPUT"];
-  
-  return (
-    <section className="py-32 px-6 bg-[#F6F3EC]">
-      <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-16">
-        <div className="md:w-1/2">
-          <h2 className="text-4xl font-serif text-[#1E2A24] leading-tight sticky top-32 uppercase">
-            A GOAL IS ONLY USEFUL WHEN IT CHANGES WHAT YOU DO.
-          </h2>
-        </div>
-        <div className="md:w-1/2 relative py-8">
-          <div className="absolute left-6 top-0 bottom-0 w-[1px] bg-[#D8D2C2]" />
-          {steps.map((step, i) => (
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.5, delay: i * 0.15 }}
-              key={step} 
-              className="mb-16 relative pl-16"
-            >
-              <div className="absolute left-[21px] top-2 w-2 h-2 bg-[#1E2A24] rounded-none" />
-              <h3 className="font-mono text-sm tracking-widest uppercase text-[#8A6D3B] mb-2">{step}</h3>
-              <p className="font-serif text-[#3F5A48] text-lg">Define the specific outcome. Then break it down further into executable units.</p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
-const DailyInputs = () => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-  
-  const inputs = [
-    { name: "Cold Calling", current: 18, target: 25 },
-    { name: "Prospecting", current: 45, target: 60 },
-    { name: "Study", current: 60, target: 60 },
-    { name: "Marketing", current: 2, target: 5 },
-  ];
-
-  return (
-    <section ref={ref} className="py-32 px-6 bg-[#F6F3EC]">
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-4xl font-serif text-[#1E2A24] mb-16 uppercase">STOP MEASURING INTENTION. MEASURE EXECUTION.</h2>
-        
-        <div className="border border-[#1E2A24] bg-white">
-          <div className="grid grid-cols-12 border-b border-[#1E2A24] bg-[#1E2A24] text-[#F6F3EC] p-4 font-mono text-[10px] tracking-widest uppercase">
-            <div className="col-span-4">Input</div>
-            <div className="col-span-2 text-right">Progress</div>
-            <div className="col-span-6 pl-8">Execution Status</div>
-          </div>
-          {inputs.map((input, i) => (
-            <div key={input.name} className="grid grid-cols-12 border-b border-[#D8D2C2] last:border-b-0 p-4 items-center text-sm">
-              <div className="col-span-4 font-serif text-[#1E2A24] text-lg">{input.name}</div>
-              <div className="col-span-2 text-right font-mono text-[#8A6D3B]">
-                <Counter from={0} to={input.current} inView={isInView} /> / {input.target}
-              </div>
-              <div className="col-span-6 pl-8">
-                <div className="h-3 w-full bg-[#D8D2C2] overflow-hidden rounded-none">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={isInView ? { width: `${(input.current / input.target) * 100}%` } : { width: 0 }}
-                    transition={{ duration: 1.5, delay: 0.5 + (i * 0.2), ease: "easeOut" }}
-                    className={`h-full ${input.current >= input.target ? 'bg-[#3F5A48]' : 'bg-[#1E2A24]'}`}
-                  />
-                </div>
-              </div>
+      {/* COMPACT ENTRY POINT */}
+      {user && (
+        <div className="bg-gray-50 border-b border-gray-200 py-8 px-6 text-center">
+          <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-between">
+            <div className="text-left mb-4 md:mb-0">
+              <h1 className="text-lg font-bold text-gray-900">Welcome back. Continue your system.</h1>
+              <p className="text-sm text-gray-500">Your dashboard is ready with your current milestone and next action.</p>
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
-const ResultsAndReality = () => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-
-  return (
-    <section ref={ref} className="py-32 px-6 bg-[#F6F3EC]">
-      <div className="max-w-5xl mx-auto">
-        <h2 className="text-4xl font-serif text-[#1E2A24] mb-16 uppercase max-w-3xl">
-          INPUTS TELL YOU WHAT YOU DID. RESULTS TELL YOU WHAT HAPPENED.
-        </h2>
-        
-        <div className="flex flex-col lg:flex-row gap-12">
-          {/* Mini table */}
-          <div className="lg:w-1/3">
-            <div className="border border-[#1E2A24] bg-white">
-              <div className="grid grid-cols-3 border-b border-[#1E2A24] bg-[#1E2A24] text-[#F6F3EC] p-3 font-mono text-[10px] tracking-widest uppercase">
-                <div>RESULT</div>
-                <div className="text-right">CURRENT</div>
-                <div className="text-right">TARGET</div>
-              </div>
-              {[
-                { r: "Revenue", c: 45000, t: 50000, prefix: "$" },
-                { r: "Meetings", c: 12, t: 15, prefix: "" },
-                { r: "Conversion", c: 2.4, t: 3.0, prefix: "%" },
-              ].map((row, i) => (
-                <div key={i} className="grid grid-cols-3 border-b border-[#D8D2C2] last:border-b-0 p-4 font-mono items-center">
-                  <div className="text-[#3F5A48] text-xs uppercase">{row.r}</div>
-                  <div className="text-right text-sm">
-                    {row.prefix === "$" ? "$" : ""}<Counter from={0} to={row.c} inView={isInView} />{row.prefix === "%" ? "%" : ""}
-                  </div>
-                  <div className="text-right text-[#8A6D3B] text-sm">
-                    {row.prefix === "$" ? "$" : ""}{row.t}{row.prefix === "%" ? "%" : ""}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <Link href="/dashboard" className="px-6 py-2.5 bg-orange-600 text-white shadow-md text-sm font-bold rounded-md hover:bg-orange-700 transition-colors">
+              Open Dashboard →
+            </Link>
           </div>
+        </div>
+      )}
+
+      {/* 0. HERO (WHITE & HIGH CONTRAST) */}
+      <section className="relative min-h-[90vh] flex items-center pt-20 pb-20 px-6 bg-white overflow-hidden">
+        {/* Architectural Grid Background */}
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.4]" style={{ backgroundImage: 'linear-gradient(#E5E7EB 1px, transparent 1px), linear-gradient(90deg, #E5E7EB 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[radial-gradient(circle,_#EA580C_0%,_transparent_60%)] opacity-[0.05] blur-[100px] pointer-events-none"></div>
+
+        <div className="max-w-[1200px] mx-auto w-full relative z-10 grid md:grid-cols-12 gap-12 items-center">
           
-          {/* Reality vs Plan Gap Visualization */}
-          <div className="lg:w-2/3 border border-[#D8D2C2] p-8 relative flex flex-col justify-between min-h-[250px] bg-white">
-            <div className="absolute top-6 left-8 font-mono text-[10px] uppercase text-[#8A6D3B] tracking-widest">REALITY VS PLAN</div>
-            
-            <div className="relative h-full w-full mt-12 flex-grow">
-              <div className="absolute inset-0 flex flex-col justify-between opacity-30">
-                <hr className="border-[#D8D2C2] border-dashed" />
-                <hr className="border-[#D8D2C2] border-dashed" />
-                <hr className="border-[#D8D2C2] border-dashed" />
-                <hr className="border-[#D8D2C2] border-dashed" />
-              </div>
-              
-              <svg className="absolute inset-0 w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 100">
-                {/* PLANNED line */}
-                <motion.polyline 
-                  initial={{ pathLength: 0 }} animate={isInView ? { pathLength: 1 } : { pathLength: 0 }} transition={{ duration: 1.5, ease: "easeInOut" }}
-                  points="0,100 25,75 50,50 75,25 100,0" fill="none" stroke="#D8D2C2" strokeWidth="1.5" strokeDasharray="4 4"
-                />
-                {/* ACTUAL line */}
-                <motion.polyline 
-                  initial={{ pathLength: 0 }} animate={isInView ? { pathLength: 1 } : { pathLength: 0 }} transition={{ duration: 1.5, delay: 0.5, ease: "easeInOut" }}
-                  points="0,100 25,85 50,65 75,55 100,45" fill="none" stroke="#1E2A24" strokeWidth="2"
-                />
-              </svg>
-
-              {/* GAP Highlight */}
-              <motion.div 
-                initial={{ opacity: 0 }} animate={isInView ? { opacity: 1 } : { opacity: 0 }} transition={{ delay: 2, duration: 1 }}
-                className="absolute right-0 top-[20%] bottom-[45%] w-[2px] bg-[#8A6D3B]"
-              >
-                <div className="absolute -left-12 top-1/2 -translate-y-1/2 font-mono text-[10px] text-[#8A6D3B] tracking-widest">GAP</div>
-                <div className="absolute top-0 -left-1 w-2.5 h-[1px] bg-[#8A6D3B]" />
-                <div className="absolute bottom-0 -left-1 w-2.5 h-[1px] bg-[#8A6D3B]" />
-              </motion.div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
-
-const Review = () => {
-  const questions = [
-    "WHAT HAPPENED?", 
-    "WHAT CHANGED?", 
-    "WHERE IS THE GAP?", 
-    "WHAT EVIDENCE EXISTS?", 
-    "WHAT SHOULD WE TEST?"
-  ];
-
-  return (
-    <section className="py-32 px-6 bg-[#1E2A24] text-[#F6F3EC]">
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-4xl font-serif mb-20 uppercase text-[#8A6D3B]">REALITY IS FEEDBACK.</h2>
-        <div className="flex flex-col gap-0 border-l border-[#3F5A48] ml-2">
-          {questions.map((q, i) => (
-            <motion.div 
-              key={q}
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.5, delay: i * 0.2 }}
-              className="pl-10 py-8 border-b border-[#3F5A48] last:border-b-0 relative"
-            >
-              <div className="absolute -left-[5px] top-1/2 -translate-y-1/2 w-[9px] h-[9px] bg-[#8A6D3B] rounded-none" />
-              <div className="font-mono text-sm tracking-widest">{q}</div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
-const Insights = () => {
-  const progression = ["OBSERVATION", "PATTERN", "HYPOTHESIS", "EXPERIMENT", "VALIDATED INSIGHT"];
-  
-  return (
-    <section className="py-32 px-6 bg-[#F6F3EC]">
-      <div className="max-w-5xl mx-auto flex flex-col lg:flex-row gap-16 lg:gap-24">
-        
-        {/* Progression */}
-        <div className="lg:w-1/3">
-          <div className="flex flex-col items-center">
-            {progression.map((item, i) => (
-              <React.Fragment key={item}>
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.15 }}
-                  className="border border-[#1E2A24] px-4 py-3 text-[10px] font-mono tracking-widest text-[#1E2A24] bg-white w-full text-center rounded-none"
-                >
-                  {item}
-                </motion.div>
-                {i < progression.length - 1 && (
-                  <div className="h-10 w-[1px] bg-[#D8D2C2]" />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-
-        {/* Experiment branching */}
-        <div className="lg:w-2/3 flex flex-col justify-center">
-          <h2 className="text-4xl font-serif text-[#1E2A24] mb-12 uppercase">DON'T GUESS. TEST.</h2>
-          <div className="border border-[#D8D2C2] p-8 relative bg-white">
-            <div className="flex flex-col md:flex-row justify-between relative z-10 gap-8 md:gap-0">
-              <div className="md:w-[45%] border border-[#D8D2C2] p-6 bg-[#F6F3EC]">
-                <div className="font-mono text-[10px] text-[#8A6D3B] mb-4 tracking-widest">CURRENT APPROACH</div>
-                <div className="font-serif text-base text-[#1E2A24]">Send 100 generic emails per day. Conversion: 1%.</div>
-              </div>
-              
-              <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-mono text-[10px] bg-white px-2 z-20 text-[#1E2A24] tracking-widest border border-[#D8D2C2] py-1">VS</div>
-              
-              <div className="md:w-[45%] border border-[#1E2A24] p-6 bg-[#1E2A24] text-[#F6F3EC] relative">
-                {/* 2D architectural shadow imitation using border/pseudo element approach */}
-                <div className="absolute inset-0 border border-[#8A6D3B] translate-x-2 translate-y-2 pointer-events-none -z-10" />
-                <div className="font-mono text-[10px] text-[#8A6D3B] mb-4 tracking-widest">NEW HYPOTHESIS</div>
-                <div className="font-serif text-base">Send 20 highly personalized emails per day. Expected Conv: 5%.</div>
-              </div>
+          <div className="md:col-span-7">
+            <div className="inline-block px-3 py-1.5 mb-8 border border-gray-200 bg-gray-50 text-orange-600 font-mono text-xs font-bold tracking-widest uppercase shadow-sm">
+              The Goal Operating System
             </div>
             
-            {/* Branching lines behind - desktop only */}
-            <svg className="hidden md:block absolute inset-0 w-full h-full z-0" pointerEvents="none">
-              <path d="M 25% 100% C 25% 50%, 75% 50%, 75% 0%" fill="none" stroke="#D8D2C2" strokeWidth="1" strokeDasharray="4 4" />
+            <h1 className="text-5xl md:text-[72px] font-extrabold text-gray-900 tracking-[-0.03em] leading-[1.05] mb-6">
+              Stop rebuilding your plan.<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-orange-400">Start evolving your system.</span>
+            </h1>
+            
+            <p className="text-xl text-gray-500 mb-10 max-w-xl leading-[1.6] font-medium">
+              Working Ledger turns your biggest long-term goal into a living operating system — one that tracks what you actually did, learns from it, and upgrades itself. No more restarting from zero.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <Link href="/signup" className="w-full sm:w-auto px-8 py-4 bg-orange-600 text-white shadow-[0_8px_30px_rgb(234,88,12,0.3)] hover:shadow-[0_8px_30px_rgb(234,88,12,0.45)] hover:-translate-y-1 text-base font-bold rounded-lg transition-all duration-200 flex items-center justify-center">
+                Initialize Your System →
+              </Link>
+              <a href="#how-it-works" className="w-full sm:w-auto px-8 py-4 bg-white text-gray-900 border-2 border-gray-200 hover:border-gray-900 text-base font-bold rounded-lg transition-all duration-200 flex items-center justify-center">
+                See how it works
+              </a>
+            </div>
+            <p className="mt-6 text-gray-400 font-mono text-[11px] font-bold tracking-wide">
+              5-year goal engine · Versioned execution memory · $5/mo
+            </p>
+          </div>
+
+          {/* Floating UI Graphic (Light Mode High Contrast) */}
+          <div className="md:col-span-5 relative hidden md:block">
+            <div className="bg-white border-2 border-gray-100 p-8 rounded-2xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] rotate-1">
+              <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
+                <div className="font-mono text-xs font-bold text-gray-400">SYSTEM_READOUT</div>
+                <div className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(234,88,12,0.5)] animate-pulse"></div>
+              </div>
+              
+              {/* Native SVG Chart */}
+              <div className="h-40 w-full relative mb-8">
+                <svg viewBox="0 0 400 100" className="w-full h-full overflow-visible">
+                  {/* Grid lines */}
+                  <path d="M0,25 L400,25 M0,50 L400,50 M0,75 L400,75" stroke="#F3F4F6" strokeWidth="1" />
+                  
+                  <path d="M0,80 Q50,85 100,70 T200,50 T300,30 T400,10" fill="none" stroke="#EA580C" strokeWidth="3" strokeDasharray="6 6" className="opacity-40" />
+                  <path d="M0,80 L100,70 L200,60 L200,50 L300,40 L300,30 L400,20 L400,10" fill="none" stroke="#EA580C" strokeWidth="4" />
+                  
+                  {/* Ticks */}
+                  <line x1="100" y1="70" x2="100" y2="85" stroke="#D1D5DB" strokeWidth="2" />
+                  <text x="100" y="100" fill="#6B7280" fontSize="12" fontWeight="bold" fontFamily="monospace" textAnchor="middle">V01</text>
+                  
+                  <line x1="200" y1="50" x2="200" y2="65" stroke="#D1D5DB" strokeWidth="2" />
+                  <text x="200" y="80" fill="#6B7280" fontSize="12" fontWeight="bold" fontFamily="monospace" textAnchor="middle">V02</text>
+                  
+                  <line x1="300" y1="30" x2="300" y2="45" stroke="#D1D5DB" strokeWidth="2" />
+                  <text x="300" y="60" fill="#6B7280" fontSize="12" fontWeight="bold" fontFamily="monospace" textAnchor="middle">V03</text>
+                  
+                  <circle cx="400" cy="10" r="6" fill="#EA580C" className="drop-shadow-md" />
+                  <circle cx="400" cy="10" r="2" fill="white" />
+                </svg>
+              </div>
+
+              <div className="flex flex-col gap-4 font-mono text-[12px] font-bold">
+                <div className="flex justify-between border-t border-gray-100 pt-3">
+                  <span className="text-gray-400">EXECUTION_VARIANCE</span>
+                  <span className="text-red-500 bg-red-50 px-2 py-0.5 rounded">-14%</span>
+                </div>
+                <div className="flex justify-between border-t border-gray-100 pt-3">
+                  <span className="text-gray-400">TRAJECTORY</span>
+                  <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded">COMPOUNDING</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* 01 / PROBLEM */}
+      <Section num="01" title="THE BUG" alternate={true}>
+        <div className="max-w-[800px] mx-auto text-center mb-16">
+          <div className="font-mono text-sm font-bold text-red-500 mb-6 tracking-widest uppercase">You've done this before</div>
+          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-8 text-gray-900">Every system you've tried has the same bug.</h2>
+          <p className="text-xl text-gray-500 leading-relaxed font-medium">
+            You set a goal. You build a plan. You execute — for a while. Then life happens, momentum drops, and you rebuild everything from scratch. The plan resets. The lessons vanish. You're better at starting than any human alive. You've just never had a system smart enough to remember why you stopped.
+          </p>
+        </div>
+
+        {/* Without vs With Diagrams */}
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* WITHOUT */}
+          <div className="bg-white border-2 border-gray-100 shadow-sm p-8 rounded-xl">
+            <h3 className="font-mono text-xs font-bold text-red-500 mb-8 border-b border-gray-100 pb-4">WITHOUT WORKING LEDGER</h3>
+            <svg viewBox="0 0 400 150" className="w-full h-auto overflow-visible">
+              <path d="M20,75 L80,50 L140,100 L200,40 L260,110 L320,75 Q360,30 320,20 Q280,10 260,110" fill="none" stroke="#F87171" strokeWidth="2" strokeDasharray="6 6" />
+              <circle cx="20" cy="75" r="5" fill="#EF4444" />
+              <circle cx="80" cy="50" r="5" fill="#EF4444" />
+              <circle cx="140" cy="100" r="5" fill="#EF4444" />
+              <circle cx="200" cy="40" r="5" fill="#EF4444" />
+              <circle cx="260" cy="110" r="5" fill="#EF4444" />
+              <circle cx="320" cy="75" r="5" fill="#EF4444" />
+              
+              <text x="20" y="95" fill="#4B5563" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">Goal</text>
+              <text x="80" y="70" fill="#4B5563" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">Guesswork</text>
+              <text x="140" y="120" fill="#4B5563" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">Burnout</text>
+              <text x="200" y="30" fill="#4B5563" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">New App</text>
+              <text x="260" y="130" fill="#4B5563" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">Amnesia</text>
+              <text x="320" y="95" fill="#EF4444" fontSize="12" fontWeight="bold" fontFamily="monospace" textAnchor="middle">Zero</text>
+            </svg>
+          </div>
+
+          {/* WITH */}
+          <div className="bg-white border-2 border-orange-100 shadow-[0_8px_30px_rgb(234,88,12,0.06)] p-8 rounded-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-orange-500/10 rounded-full blur-3xl"></div>
+            <h3 className="font-mono text-xs font-bold text-orange-600 mb-8 border-b border-orange-100 pb-4 relative z-10">WITH WORKING LEDGER</h3>
+            <svg viewBox="0 0 400 150" className="w-full h-auto overflow-visible relative z-10">
+              <path d="M20,120 L80,100 L140,80 L200,60 L260,40 L320,20 Q330,10 320,0 Q310,-10 300,0 Q290,10 320,20" fill="none" stroke="#EA580C" strokeWidth="3" />
+              <circle cx="20" cy="120" r="5" fill="#EA580C" />
+              <circle cx="80" cy="100" r="5" fill="#EA580C" />
+              <circle cx="140" cy="80" r="5" fill="#EA580C" />
+              <circle cx="200" cy="60" r="5" fill="#EA580C" />
+              <circle cx="260" cy="40" r="5" fill="#EA580C" />
+              <circle cx="320" cy="20" r="5" fill="#EA580C" />
+              
+              <text x="20" y="140" fill="#4B5563" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">Goal</text>
+              <text x="80" y="120" fill="#4B5563" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">System</text>
+              <text x="140" y="100" fill="#4B5563" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">Execution</text>
+              <text x="200" y="80" fill="#4B5563" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">Review</text>
+              <text x="260" y="60" fill="#4B5563" fontSize="11" fontWeight="bold" fontFamily="monospace" textAnchor="middle">Evolution</text>
+              <text x="320" y="40" fill="#EA580C" fontSize="12" fontWeight="bold" fontFamily="monospace" textAnchor="middle">Compounding</text>
             </svg>
           </div>
         </div>
-        
-      </div>
-    </section>
-  );
-};
+      </Section>
 
-const Optimization = () => {
-  const versions = ["v1.0", "v1.1", "v1.2", "v1.3", "v2.0"];
-  return (
-    <section className="py-32 px-6 bg-[#F6F3EC]">
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-4xl font-serif text-[#1E2A24] mb-16 uppercase">OPTIMIZATION & VERSIONS</h2>
-        
-        {/* Value changing */}
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-24 font-mono text-sm tracking-widest">
-          <div className="border border-[#D8D2C2] px-6 py-3 line-through text-[#8A6D3B] bg-white">COLD CALLING: 25/DAY</div>
-          <div className="text-[#1E2A24] text-xl hidden md:block">→</div>
-          <div className="text-[#1E2A24] text-xl md:hidden pl-8">↓</div>
-          <motion.div 
-            initial={{ scale: 0.95, opacity: 0 }} whileInView={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5 }}
-            className="border border-[#1E2A24] px-6 py-3 bg-[#1E2A24] text-[#F6F3EC]"
-          >
-            COLD CALLING: 15/DAY (QUALIFIED)
-          </motion.div>
-        </div>
-
-        {/* Timeline */}
-        <div className="relative pt-12 mt-12 pb-24">
-          <div className="absolute top-14 left-0 right-0 h-[1px] bg-[#D8D2C2]" />
-          <div className="flex justify-between relative z-10">
-            {versions.map((v, i) => (
-              <motion.div 
-                key={v}
-                initial={{ y: 20, opacity: 0 }}
-                whileInView={{ y: 0, opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="flex flex-col items-center group cursor-pointer relative"
-              >
-                <div className="w-4 h-4 bg-[#F6F3EC] border-2 border-[#1E2A24] rounded-none mb-4 group-hover:bg-[#8A6D3B] group-hover:border-[#8A6D3B] transition-colors" />
-                <div className="font-mono text-[10px] tracking-widest text-[#1E2A24]">{v}</div>
-                
-                {/* Hover details */}
-                <div className="absolute top-16 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 border border-[#1E2A24] bg-white p-4 w-56 text-xs font-serif z-20 pointer-events-none shadow-sm">
-                  <div className="font-mono text-[8px] text-[#8A6D3B] mb-2 uppercase tracking-widest">Version Notes</div>
-                  Adjusted input targets based on Q{i+1} review. Refined weekly pacing and hypothesis execution.
-                </div>
-              </motion.div>
-            ))}
+      {/* 02 / REFRAME */}
+      <Section num="02" title="THE MISSING LAYER">
+        <div className="grid md:grid-cols-2 gap-16 items-center">
+          <div>
+            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-8 leading-[1.1] text-gray-900">Your goal isn't the system.<br/>The feedback loop is.</h2>
+            <p className="text-xl text-gray-500 mb-6 leading-relaxed font-medium">
+              A goal tells you the destination. A plan tells you the route. Neither tells you what to repeatedly do, whether it happened, what you learned, or what should change next. 
+            </p>
+            <p className="text-xl text-gray-900 font-bold">Working Ledger is the layer that was always missing.</p>
+          </div>
+          <div className="bg-gray-50 border-2 border-gray-100 p-10 rounded-xl shadow-sm">
+            <ul className="space-y-6 font-mono text-sm font-bold">
+              <li className="flex items-start gap-4">
+                <span className="text-orange-600 bg-orange-100 px-2 py-0.5 rounded">01</span>
+                <span className="text-gray-500">What should I repeatedly do?</span>
+              </li>
+              <li className="flex items-start gap-4 border-t border-gray-200 pt-6">
+                <span className="text-orange-600 bg-orange-100 px-2 py-0.5 rounded">02</span>
+                <span className="text-gray-500">Did it actually happen?</span>
+              </li>
+              <li className="flex items-start gap-4 border-t border-gray-200 pt-6">
+                <span className="text-orange-600 bg-orange-100 px-2 py-0.5 rounded">03</span>
+                <span className="text-gray-500">What did that teach me?</span>
+              </li>
+              <li className="flex items-start gap-4 border-t border-gray-200 pt-6">
+                <span className="text-orange-600 bg-orange-100 px-2 py-0.5 rounded shadow-sm">04</span>
+                <span className="text-gray-900 text-base">What changes next?</span>
+              </li>
+            </ul>
           </div>
         </div>
-      </div>
-    </section>
-  );
-};
+      </Section>
 
-const History = () => {
-  const archives = [
-    { period: "2026 Q3", status: "ACTIVE" },
-    { period: "2026 Q2", status: "ARCHIVED" },
-    { period: "2026 Q1", status: "ARCHIVED" },
-    { period: "2025 Q4", status: "ARCHIVED" },
-  ];
-  return (
-    <section className="py-24 px-6 bg-[#F6F3EC]">
-      <div className="max-w-4xl mx-auto">
-        <h3 className="font-mono text-[10px] text-[#8A6D3B] tracking-widest uppercase mb-8">SYSTEM ARCHIVE</h3>
-        <div className="border border-[#1E2A24] bg-white">
-          {archives.map((arc, i) => (
-            <div key={arc.period} className="flex justify-between items-center p-6 border-b border-[#D8D2C2] last:border-b-0 hover:bg-[#1E2A24] hover:text-[#F6F3EC] transition-colors cursor-pointer group">
-              <span className="font-serif text-xl">{arc.period} System</span>
-              <span className={`font-mono text-[10px] tracking-widest ${arc.status === 'ACTIVE' ? 'text-[#3F5A48] group-hover:text-[#F6F3EC]' : 'text-[#8A6D3B] group-hover:text-[#D8D2C2]'}`}>
-                {arc.status}
-              </span>
+      {/* 03 / MECHANISM */}
+      <Section num="03" title="HOW IT WORKS" alternate={true} id="how-it-works">
+        <div className="grid lg:grid-cols-12 gap-16">
+          <div className="lg:col-span-5 relative">
+            <div className="sticky top-32">
+              <h2 className="text-4xl font-extrabold tracking-tight mb-6 text-gray-900">Engineered for Reality.</h2>
+              <p className="text-gray-500 text-lg leading-relaxed mb-8 font-medium">
+                The architecture maps precisely to the reality of executing long-term objectives.
+              </p>
+              
+              {/* Waterfall SVG */}
+              <div className="bg-white border-2 border-gray-100 shadow-sm p-8 rounded-xl font-mono text-xs font-bold text-gray-500">
+                <svg viewBox="0 0 200 200" className="w-full h-auto">
+                  <text x="10" y="20" fill="#111827">5-YEAR GOAL</text>
+                  <path d="M20,25 L20,60 L35,60" fill="none" stroke="#D1D5DB" strokeWidth="2" />
+                  <text x="40" y="64" fill="#6B7280">YEARLY TARGET</text>
+                  
+                  <path d="M20,60 L20,100 L55,100" fill="none" stroke="#D1D5DB" strokeWidth="2" />
+                  <text x="60" y="104" fill="#6B7280">QUARTERLY ROCK</text>
+
+                  <path d="M20,100 L20,140 L75,140" fill="none" stroke="#D1D5DB" strokeWidth="2" />
+                  <text x="80" y="144" fill="#6B7280">WEEKLY MILESTONE</text>
+
+                  <path d="M20,140 L20,180 L95,180" fill="none" stroke="#EA580C" strokeWidth="3" />
+                  <text x="100" y="184" fill="#EA580C">DAILY INPUTS</text>
+                </svg>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
-const CompleteLoop = () => {
-  const loop = ["GOAL", "PLAN", "INPUT", "RESULT", "REVIEW", "INSIGHT", "EXPERIMENT", "OPTIMIZATION", "SYSTEM VERSION", "EXECUTE AGAIN"];
-  
-  const ref = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start center", "end center"]
-  });
-
-  const yPath = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
-
-  return (
-    <section ref={ref} className="py-40 px-6 bg-[#F6F3EC]">
-      <div className="max-w-xl mx-auto text-center relative">
-        <h2 className="text-4xl font-serif text-[#1E2A24] mb-20 uppercase">THE COMPLETE LOOP</h2>
-        
-        <div className="relative inline-flex flex-col items-center w-full">
-          <div className="absolute top-0 bottom-0 w-[1px] bg-[#D8D2C2] left-1/2 -translate-x-1/2" />
+          </div>
           
-          <motion.div 
-            style={{ top: yPath }}
-            className="absolute left-1/2 -translate-x-1/2 w-3 h-3 bg-[#8A6D3B] z-20 rounded-none shadow-[0_0_0_4px_#F6F3EC]"
-          />
-
-          {loop.map((item, i) => (
-            <div key={item} className="bg-white py-4 px-6 z-10 my-4 border border-[#1E2A24] font-mono text-[10px] tracking-widest uppercase w-48">
-              {item}
+          <div className="lg:col-span-7 space-y-12">
+            <div>
+              <div className="font-mono text-xs font-bold text-orange-600 mb-2 bg-orange-50 inline-block px-2 py-1 rounded">01 / DEFINE THE DESTINATION</div>
+              <h3 className="text-2xl font-bold mb-3 text-gray-900 mt-4">Set your 5-year goal.</h3>
+              <p className="text-gray-600 leading-relaxed text-lg">Establish the baseline, target, unit, and deadline. This is the unmoving anchor of the entire system.</p>
             </div>
-          ))}
+            <div className="border-t border-gray-200 pt-12">
+              <div className="font-mono text-xs font-bold text-orange-600 mb-2 bg-orange-50 inline-block px-2 py-1 rounded">02 / BUILD THE ROADMAP</div>
+              <h3 className="text-2xl font-bold mb-3 text-gray-900 mt-4">Auto-decompose the timeline.</h3>
+              <p className="text-gray-600 leading-relaxed text-lg">Break the long-term objective into manageable blocks: Year → Quarter → Monthly Rocks → Weekly Milestones.</p>
+            </div>
+            <div className="border-t border-gray-200 pt-12">
+              <div className="font-mono text-xs font-bold text-orange-600 mb-2 bg-orange-50 inline-block px-2 py-1 rounded">03 / EXECUTE & LOG REALITY</div>
+              <h3 className="text-2xl font-bold mb-3 text-gray-900 mt-4">Record what actually happened.</h3>
+              <p className="text-gray-600 leading-relaxed text-lg">Not what you intended. The system demands absolute truth in execution data to function correctly.</p>
+            </div>
+            <div className="border-t border-gray-200 pt-12">
+              <div className="font-mono text-xs font-bold text-orange-600 mb-2 bg-orange-50 inline-block px-2 py-1 rounded">04 / INVESTIGATE, DON'T GUESS</div>
+              <h3 className="text-2xl font-bold mb-3 text-gray-900 mt-4">AI reviews your real data.</h3>
+              <p className="text-gray-600 leading-relaxed text-lg">Discover bottlenecks, correlations, and patterns in your execution vs milestone progression.</p>
+            </div>
+            <div className="border-t border-gray-200 pt-12">
+              <div className="font-mono text-xs font-bold text-orange-600 mb-2 bg-orange-50 inline-block px-2 py-1 rounded">05 / EVOLVE THE VERSION</div>
+              <h3 className="text-2xl font-bold mb-3 text-gray-900 mt-4">Update an input. Archive the old.</h3>
+              <p className="text-gray-600 leading-relaxed text-lg">The old version is archived, not erased. V1 → V2 → V3. You continuously iterate toward optimal yield.</p>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
-  );
-};
+      </Section>
 
-const Footer = () => (
-  <footer className="py-32 px-6 bg-[#1E2A24] text-[#F6F3EC] flex flex-col items-center text-center">
-    <h2 className="text-5xl md:text-7xl font-serif mb-16 uppercase leading-tight">BUILD THE SYSTEM.<br/>THEN RUN IT.</h2>
-    <div className="flex flex-col sm:flex-row gap-6 mb-40">
-      <Link href="/signup" className="bg-[#F6F3EC] text-[#1E2A24] px-10 py-4 text-xs uppercase font-bold tracking-widest hover:bg-[#8A6D3B] hover:text-[#F6F3EC] hover:border-[#8A6D3B] transition-colors border border-[#F6F3EC] rounded-none">
-        CREATE ACCOUNT
-      </Link>
-      <Link href="/explore" className="bg-transparent border border-[#F6F3EC] text-[#F6F3EC] px-10 py-4 text-xs uppercase font-bold tracking-widest hover:bg-[#F6F3EC] hover:text-[#1E2A24] transition-colors rounded-none">
-        EXPLORE
-      </Link>
-    </div>
-    
-    <div className="w-full max-w-5xl border-t border-[#3F5A48] pt-10 flex flex-col md:flex-row justify-between items-center font-mono text-[10px] tracking-widest text-[#D8D2C2]">
-      <span>© 2026 THE WORKING LEDGER</span>
-      <Link href="https://wellmadedigital.vercel.app/" target="_blank" className="hover:text-[#F6F3EC] transition-colors mt-6 md:mt-0 uppercase">
-        BUILT BY WELLMADE DIGITAL
-      </Link>
-    </div>
-  </footer>
-);
+      {/* 04 / DIFFERENTIATOR */}
+      <Section num="04" title="THE MEMORY LAYER">
+        <div className="max-w-[800px] mx-auto text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-8 text-gray-900">Your system gets better because it remembers.</h2>
+          <p className="text-xl text-gray-500 leading-relaxed font-medium">
+            Most productivity tools show you today. Working Ledger preserves every version of the system that got you here. Nothing is overwritten. Every iteration becomes evidence for the next one.
+          </p>
+        </div>
 
-/* -------------------------------------------------------------------------- */
-/*                                MAIN EXPORT                                 */
-/* -------------------------------------------------------------------------- */
+        <div className="max-w-[600px] mx-auto space-y-4">
+          <div className="bg-gray-50 border border-gray-200 p-6 rounded-xl flex items-center justify-between">
+            <div>
+              <div className="font-mono text-xs font-bold text-gray-400 mb-3 uppercase">V01_BASELINE</div>
+              <div className="text-sm font-bold text-gray-900 mb-1">Input: 3x/week outreach</div>
+              <div className="text-sm text-gray-500 font-medium">Result: 1.2x pipeline</div>
+            </div>
+            <div className="w-24 h-8">
+              <svg viewBox="0 0 100 30" className="w-full h-full">
+                <path d="M0,25 L30,20 L60,25 L100,15" fill="none" stroke="#9CA3AF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+          <div className="bg-white border-2 border-orange-200 shadow-[0_8px_30px_rgb(234,88,12,0.1)] p-6 rounded-xl flex items-center justify-between relative">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500 rounded-l-xl"></div>
+            <div className="pl-2">
+              <div className="font-mono text-xs font-bold text-orange-600 mb-3 uppercase">V02_OPTIMIZED</div>
+              <div className="text-sm font-bold text-gray-900 mb-1">Input: Daily outreach + follow-up cadence</div>
+              <div className="text-sm text-gray-600 font-medium">Result: 2.8x pipeline</div>
+            </div>
+            <div className="w-24 h-8">
+              <svg viewBox="0 0 100 30" className="w-full h-full">
+                <path d="M0,15 L30,10 L60,15 L100,5" fill="none" stroke="#EA580C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+          <div className="bg-gray-900 border border-gray-800 p-6 rounded-xl flex items-center justify-between">
+            <div>
+              <div className="font-mono text-xs font-bold text-gray-400 mb-3 uppercase">V03_COMPOUNDING</div>
+              <div className="text-sm font-bold text-white mb-1">Input: Delegated outreach, owner reviews only</div>
+              <div className="text-sm text-green-400 font-medium">Result: Trending to terminal velocity</div>
+            </div>
+            <div className="w-24 h-8">
+              <svg viewBox="0 0 100 30" className="w-full h-full">
+                <path d="M0,5 L30,5 L60,2 L100,0" fill="none" stroke="#4ADE80" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </Section>
 
-export default function LedgerHomepage() {
-  return (
-    <div className="bg-[#F6F3EC] text-[#1E2A24] min-h-screen font-sans selection:bg-[#8A6D3B] selection:text-[#F6F3EC]">
-      <LedgerLine />
-      <Nav />
-      <Hero />
-      <hr className="border-[#D8D2C2]" />
-      <OneSystem />
-      <hr className="border-[#D8D2C2]" />
-      <Structure />
-      <hr className="border-[#D8D2C2]" />
-      <DailyInputs />
-      <hr className="border-[#D8D2C2]" />
-      <ResultsAndReality />
-      <hr className="border-[#D8D2C2]" />
-      <Review />
-      <hr className="border-[#D8D2C2]" />
-      <Insights />
-      <hr className="border-[#D8D2C2]" />
-      <Optimization />
-      <hr className="border-[#D8D2C2]" />
-      <History />
-      <hr className="border-[#D8D2C2]" />
-      <CompleteLoop />
-      <Footer />
+      {/* 05 / AI PROOF */}
+      <Section num="05" title="INVESTIGATION" alternate={true}>
+        <div className="max-w-[800px] mx-auto text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-8 text-gray-900">It doesn't cheer you on.<br/>It investigates you.</h2>
+          <p className="text-xl text-gray-500 leading-relaxed font-medium">
+            Weekly and monthly reviews run against your actual logged data — not vibes. You get anomalies, correlations, and hypotheses. Then you decide what to change.
+          </p>
+        </div>
+
+        <div className="max-w-[800px] mx-auto space-y-6">
+          <div className="bg-white border-l-4 border-l-red-500 border border-gray-200 shadow-sm p-8 rounded-xl">
+            <div className="font-mono text-xs font-bold text-red-500 mb-4 bg-red-50 inline-block px-2 py-1 rounded">OBSERVED_ANOMALY</div>
+            <p className="text-base text-gray-900 font-medium">System execution variance is 14% below baseline moving average across primary drivers in the last 14 days.</p>
+          </div>
+          <div className="bg-white border-l-4 border-l-orange-500 border border-gray-200 shadow-sm p-8 rounded-xl">
+            <div className="font-mono text-xs font-bold text-orange-600 mb-4 bg-orange-50 inline-block px-2 py-1 rounded">CORRELATED_PATTERN</div>
+            <p className="text-base text-gray-900 font-medium">Periods of high input volatility correlate strongly with degraded milestone velocity and delayed outcomes.</p>
+          </div>
+          <div className="bg-gray-900 border-l-4 border-l-white border border-gray-800 shadow-lg p-8 rounded-xl">
+            <div className="font-mono text-xs font-bold text-white mb-4 bg-white/10 inline-block px-2 py-1 rounded">SYNTHESIZED_HYPOTHESIS</div>
+            <p className="text-base text-gray-300 font-medium">Stabilizing primary execution inputs may yield a non-linear acceleration in outcome generation. Recommend anchoring core parameters and archiving friction-heavy variables.</p>
+          </div>
+        </div>
+      </Section>
+
+      {/* 06 / ARCHITECTURE */}
+      <Section num="06" title="ARCHITECTURE">
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-gray-50 border border-gray-200 p-10 rounded-2xl relative group hover:bg-white hover:border-orange-200 hover:shadow-lg transition-all duration-300">
+            <div className="relative z-10">
+              <h3 className="font-extrabold text-2xl mb-3 text-gray-900 group-hover:text-orange-600 transition-colors">Strategic Layer</h3>
+              <p className="text-gray-500 text-base font-medium">From 5-year vision down to this week's milestone.</p>
+            </div>
+          </div>
+          <div className="bg-gray-50 border border-gray-200 p-10 rounded-2xl relative group hover:bg-white hover:border-orange-200 hover:shadow-lg transition-all duration-300">
+            <div className="relative z-10">
+              <h3 className="font-extrabold text-2xl mb-3 text-gray-900 group-hover:text-orange-600 transition-colors">Operating Layer</h3>
+              <p className="text-gray-500 text-base font-medium">Daily inputs, targets, frequency, and weight — the levers you actually pull.</p>
+            </div>
+          </div>
+          <div className="bg-gray-50 border border-gray-200 p-10 rounded-2xl relative group hover:bg-white hover:border-orange-200 hover:shadow-lg transition-all duration-300">
+            <div className="relative z-10">
+              <h3 className="font-extrabold text-2xl mb-3 text-gray-900 group-hover:text-orange-600 transition-colors">Investigation Layer</h3>
+              <p className="text-gray-500 text-base font-medium">Weekly, monthly, quarterly AI reviews of real execution data.</p>
+            </div>
+          </div>
+          <div className="bg-gray-50 border border-gray-200 p-10 rounded-2xl relative group hover:bg-white hover:border-orange-200 hover:shadow-lg transition-all duration-300">
+            <div className="relative z-10">
+              <h3 className="font-extrabold text-2xl mb-3 text-gray-900 group-hover:text-orange-600 transition-colors">Memory Layer</h3>
+              <p className="text-gray-500 text-base font-medium">Every result, every version, every decision — permanently timestamped.</p>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* 07 / PRICING */}
+      <Section num="07" title="PRICING" alternate={true} id="pricing">
+        <div className="max-w-[600px] mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-6 text-gray-900">One system. One price.<br/>No excuse to restart.</h2>
+          
+          <div className="bg-white border-2 border-orange-100 shadow-[0_20px_50px_-12px_rgba(234,88,12,0.15)] p-12 rounded-3xl mt-12 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl"></div>
+            <div className="relative z-10">
+              <div className="flex items-baseline justify-center mb-4">
+                <span className="text-[80px] leading-none font-extrabold text-gray-900 tracking-tight">$5</span>
+                <span className="text-2xl text-gray-500 ml-2 font-mono font-bold">/mo</span>
+              </div>
+              <p className="text-gray-600 mb-10 text-base font-medium max-w-xs mx-auto">
+                Less than the coffee that fuels the plan you'll abandon next month.
+              </p>
+              <Link href="/signup" className="block w-full py-5 bg-orange-600 text-white text-lg font-bold rounded-xl shadow-[0_8px_30px_rgb(234,88,12,0.3)] hover:shadow-[0_8px_30px_rgb(234,88,12,0.45)] hover:-translate-y-1 transition-all">
+                Start Building Your System
+              </Link>
+              <p className="mt-6 font-mono text-[12px] font-bold text-gray-400">Cancel anytime. Your version history stays yours.</p>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* 08 / FAQ */}
+      <Section num="08" title="FAQ">
+        <div className="max-w-[800px] mx-auto space-y-10">
+          <div className="border-b border-gray-200 pb-10">
+            <h3 className="font-extrabold text-2xl mb-4 text-gray-900">How is this different from Notion or Todoist?</h3>
+            <p className="text-gray-600 text-lg leading-relaxed font-medium">
+              Task managers reset every day. Workspace tools require you to build and maintain the logic yourself. Working Ledger is a pre-built operating system focused specifically on linking daily execution data to long-term milestone progression, and running automated investigation reviews on that data.
+            </p>
+          </div>
+          <div className="border-b border-gray-200 pb-10">
+            <h3 className="font-extrabold text-2xl mb-4 text-gray-900">Do I need to be technical to set this up?</h3>
+            <p className="text-gray-600 text-lg leading-relaxed font-medium">
+              No. While the interface is designed to feel like a high-precision instrument, the actual setup process guides you step-by-step from your 5-year goal down to your daily inputs. If you can define what you want and what you need to do to get it, you can run the system.
+            </p>
+          </div>
+        </div>
+      </Section>
+
+      {/* 09 / FINAL CTA */}
+      <section className="py-32 px-6 bg-gray-900 text-center border-t border-gray-800">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-4xl md:text-6xl font-extrabold text-white tracking-tight mb-8">Start with the goal that actually matters.</h2>
+          <p className="text-2xl text-gray-400 mb-12 font-medium">Not another plan. A system that remembers.</p>
+          <Link href="/signup" className="inline-flex items-center px-10 py-5 bg-orange-600 text-white text-lg font-bold rounded-xl shadow-[0_8px_30px_rgb(234,88,12,0.3)] hover:shadow-[0_8px_30px_rgb(234,88,12,0.45)] hover:-translate-y-1 transition-all">
+            Initialize Your System →
+          </Link>
+        </div>
+      </section>
+
+      {/* 10 / FOOTER */}
+      <footer className="bg-white border-t border-gray-200 py-12 px-6">
+        <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center">
+          <div className="flex items-center gap-3 mb-6 md:mb-0">
+            <img src="/assets/logo.png" alt="Working Ledger Logo" className="h-6 w-auto grayscale opacity-50 hover:opacity-100 transition-opacity" />
+            <span className="text-gray-400 font-mono text-xs font-bold">© 2026 Working Ledger. All rights reserved.</span>
+          </div>
+          <div className="flex gap-6 font-mono text-xs font-bold text-gray-400">
+            <Link href="/terms" className="hover:text-orange-600 transition-colors">TERMS</Link>
+            <Link href="/privacy" className="hover:text-orange-600 transition-colors">PRIVACY</Link>
+            <Link href="/contact" className="hover:text-orange-600 transition-colors">CONTACT</Link>
+          </div>
+        </div>
+      </footer>
+
     </div>
   );
 }

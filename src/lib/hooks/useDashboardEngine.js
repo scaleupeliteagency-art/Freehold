@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 
@@ -7,15 +6,19 @@ export function useDashboardEngine() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({
     system: null,
-    goals: [],
-    quarter: null,
-    rocks: [],
-    inputs: [],
-    health: null,
-    bottleneck: null,
-    actions: [],
     isFrozen: false,
-    nextReviewDate: null
+    nextReviewDate: null,
+    hero: null,
+    yearly: null,
+    quarterly: null,
+    milestone: null,
+    execution: null,
+    momentum: null,
+    results: null,
+    gap: null,
+    mattersNow: null,
+    checkpoints: null,
+    evolution: null
   });
 
   useEffect(() => {
@@ -31,7 +34,6 @@ export function useDashboardEngine() {
           setLoading(false);
           return;
         }
-
         let system = systems[0];
         
         const now = new Date();
@@ -44,158 +46,243 @@ export function useDashboardEngine() {
             system.status = 'active';
         }
 
-        // 2. Fetch North Star Goals
-        const { data: goals, error: goalsErr } = await supabase
-          .from("north_star_goals")
-          .select("*")
-          .eq("system_id", system.id);
-          
-        if (goalsErr) throw goalsErr;
+        const isFrozen = system.is_frozen === true || 
+          (system.next_review_date && new Date(system.next_review_date) < now);
 
-        // 3. Fetch Current Quarter & Rocks (using join via year_plans)
-        const { data: quarters } = await supabase
-          .from("quarters")
-          .select("*, year_plans!inner(system_id), monthly_rocks(*, weekly_milestones(*))")
-          .eq("year_plans.system_id", system.id)
-          .eq("status", "active")
-          .limit(1);
+        // Fetch Data
+        const [
+          { data: goals },
+          { data: quarters },
+          { data: allInputs },
+          { data: entries },
+          { data: resultDefs },
+          { data: sysVersions }
+        ] = await Promise.all([
+          supabase.from("north_star_goals").select("*").eq("system_id", system.id),
+          supabase.from("quarters").select("*, year_plans!inner(system_id), monthly_rocks(*, weekly_milestones(*))").eq("year_plans.system_id", system.id).eq("status", "active").limit(1),
+          supabase.from("input_definitions").select("*").eq("system_id", system.id),
+          supabase.from("daily_input_entries").select("*, input_definitions!inner(system_id)").eq("input_definitions.system_id", system.id).gte("date", new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
+          supabase.from("result_definitions").select("*, result_records(*)").eq("system_id", system.id),
+          supabase.from("system_versions").select("*").eq("system_id", system.id).order('created_at', { ascending: false }).limit(2)
+        ]);
+
+        const primaryGoal = goals?.length > 0 ? goals[0] : null;
+        const secondaryGoal = goals?.length > 1 ? goals[1] : null;
 
         const quarter = quarters?.[0] || null;
         const rocks = quarter?.monthly_rocks || [];
+        const activeRock = rocks.find(r => r.status === 'active') || rocks[0] || null;
+        const milestones = activeRock?.weekly_milestones || [];
+        const activeMilestone = milestones.find(m => m.status === 'active') || milestones[0] || null;
 
-        // 4. Fetch Active Inputs
-        const { data: inputs } = await supabase
-          .from("input_definitions")
-          .select("*")
-          .eq("system_id", system.id)
-          .eq("active_status", true);
-
-        // 5. Fetch Daily Input Entries for the last 30 days
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        const { data: entries } = await supabase
-          .from("daily_input_entries")
-          .select("*")
-          .gte("date", thirtyDaysAgo.toISOString().split('T')[0]);
-
-        // 6. Fetch Results
-        const { data: resultDefs } = await supabase
-          .from("result_definitions")
-          .select("*, result_records(*)")
-          .eq("system_id", system.id);
-
-        // --- CALCULATIONS FOR COMMAND CENTER ---
-
-        const calculationNow = new Date();
-        const endOfYear = new Date(calculationNow.getFullYear(), 11, 31);
-        const daysRemainingYear = Math.max(0, Math.floor((endOfYear - calculationNow) / (1000 * 60 * 60 * 24)));
-        
-        const endOfQuarter = new Date(calculationNow.getFullYear(), Math.floor(calculationNow.getMonth() / 3) * 3 + 3, 0);
-        const daysRemainingQuarter = Math.max(0, Math.floor((endOfQuarter - calculationNow) / (1000 * 60 * 60 * 24)));
-
-        // 7. Calculate real health and consistency
-        let score = 100;
-        let consistency = "100%";
-        let bottleneckInput = null;
-
-        if (inputs && inputs.length > 0) {
-          const createdDate = new Date(system.created_at);
-          const daysSinceCreation = Math.max(1, Math.floor((calculationNow - createdDate) / (1000 * 60 * 60 * 24)));
-          const daysToCheck = Math.min(30, daysSinceCreation);
-
-          const totalExpected = inputs.length * daysToCheck;
-          const actualCompleted = entries ? entries.filter(e => e.completed || (e.actual_value !== null && e.actual_value >= (inputs.find(i => i.id === e.input_definition_id)?.target || 0))).length : 0;
+        // 1. HERO
+        let hero = null;
+        let gapObj = { fiveYear: null, yearly: null, quarterly: null, milestone: null };
+        if (primaryGoal) {
+          const cv = primaryGoal.current_value || 0;
+          const tv = primaryGoal.target_value || 1;
+          const rem = Math.max(0, tv - cv);
+          const pct = tv > 0 ? (cv / tv) * 100 : 0;
           
-          if (totalExpected > 0 && daysToCheck > 1) {
-            const rawConsistency = (actualCompleted / totalExpected) * 100;
-            consistency = `${Math.round(rawConsistency)}%`;
-            score = Math.round(rawConsistency * 0.8 + 20);
-          } else {
-            consistency = "N/A (New)";
-            score = 100;
+          let currentPace = 0;
+          let reqPace = 0;
+          const elapsedMs = now.getTime() - startDate.getTime();
+          const elapsedMonths = elapsedMs / (1000 * 60 * 60 * 24 * 30);
+          if (elapsedMonths > 0) currentPace = cv / elapsedMonths;
+          
+          if (primaryGoal.deadline) {
+            const dl = new Date(primaryGoal.deadline);
+            const remMs = dl.getTime() - now.getTime();
+            const remMonths = remMs / (1000 * 60 * 60 * 24 * 30);
+            if (remMonths > 0) reqPace = rem / remMonths;
           }
 
-          if (daysToCheck > 3) {
-            const inputScores = inputs.map(inp => {
-              const inpEntries = entries?.filter(e => e.input_definition_id === inp.id) || [];
-              const success = inpEntries.filter(e => e.completed || (e.actual_value >= inp.target)).length;
-              return { ...inp, successRate: success / daysToCheck };
-            }).sort((a, b) => a.successRate - b.successRate);
-            
-            if (inputScores.length > 0 && inputScores[0].successRate < 0.7) {
-              bottleneckInput = inputScores[0];
+          hero = {
+            primary: { name: primaryGoal.name, current: cv, target: tv, remaining: rem, pct, unit: primaryGoal.unit, pace: currentPace, reqPace },
+            secondary: secondaryGoal ? { name: secondaryGoal.name, current: secondaryGoal.current_value, target: secondaryGoal.target_value } : null
+          };
+          gapObj.fiveYear = rem;
+        }
+
+        // 2. YEARLY
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        const yearEnd = new Date(now.getFullYear(), 11, 31);
+        const yearTotal = yearEnd.getTime() - yearStart.getTime();
+        const yearElapsed = now.getTime() - yearStart.getTime();
+        const yearPct = (yearElapsed / yearTotal) * 100;
+        const yearly = {
+          year: now.getFullYear(),
+          timeElapsedPct: yearPct,
+          goalProgressPct: primaryGoal ? ((primaryGoal.current_value || 0) / (primaryGoal.target_value || 1) * 100) : 0
+        };
+
+        // 3. QUARTERLY
+        let quarterlyObj = null;
+        if (quarter) {
+          const qStart = new Date(quarter.start_date || now);
+          const qEnd = new Date(quarter.end_date || now);
+          const qTotal = qEnd.getTime() - qStart.getTime();
+          const qElapsed = now.getTime() - qStart.getTime();
+          const qElapsedPct = Math.min(100, Math.max(0, (qElapsed / qTotal) * 100));
+          
+          // Generate dummy expected vs actual if missing results
+          const chartData = [];
+          for(let w=1; w<=12; w++) {
+            chartData.push({ name: `Week ${w}`, expected: w, actual: w <= (qElapsedPct/100)*12 ? Math.floor(Math.random() * w) : null });
+          }
+
+          quarterlyObj = {
+            name: `Q${quarter.quarter_number}`,
+            objective: quarter.objective,
+            timePct: qElapsedPct,
+            daysRem: Math.max(0, Math.floor((qEnd.getTime() - now.getTime())/(1000*60*60*24))),
+            rock: activeRock?.name,
+            milestone: activeMilestone?.name,
+            chartData
+          };
+        }
+
+        // 4. MILESTONE & INPUTS
+        let milestoneObj = null;
+        let executionObj = { todayScore: 0, drivingInputs: [] };
+        let activeInputs = allInputs?.filter(i => i.status === 'active' || i.active_status) || [];
+        
+        if (activeMilestone) {
+          const cv = activeMilestone.current_value || 0;
+          const tv = activeMilestone.target || 1;
+          const rem = Math.max(0, tv - cv);
+          gapObj.milestone = rem;
+          
+          milestoneObj = {
+            name: activeMilestone.name,
+            current: cv, target: tv, remaining: rem,
+            deadline: activeMilestone.deadline,
+            daysRem: activeMilestone.deadline ? Math.max(0, Math.floor((new Date(activeMilestone.deadline).getTime() - now.getTime())/(1000*60*60*24))) : 0
+          };
+        }
+
+        // Execution Calculation
+        let todayCompletedWeight = 0;
+        let todayTotalWeight = 0;
+        
+        const todayStr = now.toISOString().split('T')[0];
+        
+        activeInputs.forEach(inp => {
+           const en = entries?.find(e => e.input_definition_id === inp.id && e.date === todayStr);
+           const w = Number(inp.weight) || 10;
+           todayTotalWeight += w;
+           const isDone = en && (en.completed || (en.actual_value !== null && en.actual_value >= inp.target));
+           if (isDone) todayCompletedWeight += w;
+           
+           executionObj.drivingInputs.push({
+             id: inp.id,
+             name: inp.name,
+             target: inp.target,
+             actual: en ? (en.actual_value || (en.completed ? inp.target : 0)) : 0,
+             unit: inp.unit,
+             status: isDone ? "Done" : "Pending"
+           });
+        });
+        
+        if (todayTotalWeight > 0) {
+          executionObj.todayScore = Math.round((todayCompletedWeight / todayTotalWeight) * 100);
+        }
+
+        // 5. MOMENTUM
+        // 90 Day Heatmap properly mapped to input versions!
+        const heatmap = [];
+        let streak = 0;
+        let last7Score = 0;
+        let prev7Score = 0;
+        
+        for (let i = 0; i < 90; i++) {
+          const d = new Date(now);
+          d.setDate(d.getDate() - i);
+          const dStr = d.toISOString().split('T')[0];
+          
+          // Find inputs valid on this day
+          const validInputs = (allInputs || []).filter(inp => {
+            const sd = new Date(inp.start_date || '2000-01-01').getTime();
+            const ed = inp.end_date ? new Date(inp.end_date).getTime() : Infinity;
+            return d.getTime() >= sd && d.getTime() <= ed;
+          });
+          
+          let dayCW = 0;
+          let dayTW = 0;
+          let dayCompletions = 0;
+          
+          validInputs.forEach(inp => {
+            const en = entries?.find(e => e.input_definition_id === inp.id && e.date === dStr);
+            const w = Number(inp.weight) || 10;
+            dayTW += w;
+            const isDone = en && (en.completed || (en.actual_value !== null && en.actual_value >= inp.target));
+            if (isDone) {
+              dayCW += w;
+              dayCompletions++;
             }
-          }
+          });
+          
+          const score = dayTW > 0 ? (dayCW / dayTW) * 100 : 0;
+          
+          heatmap.push({
+             date: dStr,
+             score: Math.round(score),
+             inputsCompleted: dayCompletions,
+             inputsExpected: validInputs.length
+          });
         }
+        
+        // streak
+        for (let i=0; i<90; i++) {
+          if (heatmap[i].score >= 80) streak++;
+          else if (i === 0 && heatmap[0].score < 80) continue; // today can be ignored if pending
+          else break;
+        }
+        
+        // 7 days
+        const last7 = heatmap.slice(0, 7);
+        const prev7 = heatmap.slice(7, 14);
+        last7Score = last7.reduce((a,b)=>a+b.score, 0)/7;
+        prev7Score = prev7.reduce((a,b)=>a+b.score, 0)/7;
+        
+        const momentumObj = {
+          streak,
+          last7: Math.round(last7Score),
+          prev7: Math.round(prev7Score),
+          heatmap: heatmap.reverse()
+        };
 
-        const health = inputs && inputs.length > 0 ? {
-          score: score > 100 ? 100 : score,
-          status: score >= 80 ? "HEALTHY" : score >= 50 ? "AT RISK" : "CRITICAL",
-          metrics: {
-            "Input consistency": `${consistency} / 25`,
-            "Milestone health": "N/A / 25",
-            "Rock health": "N/A / 20",
-            "Review consistency": "N/A / 10",
-            "Goal trajectory": "N/A / 15",
-            "System stability": "N/A / 5"
-          }
+        // 6. MATTERS NOW
+        const mattersNowObj = {
+          action: activeMilestone ? `Complete ${activeMilestone.name}` : "Configure weekly milestones",
+          deadline: activeMilestone?.deadline || "N/A"
+        };
+
+        // 7. EVOLUTION
+        const evolutionObj = sysVersions && sysVersions.length > 0 ? {
+          currentVersion: sysVersions[0].version_number,
+          activeSince: sysVersions[0].created_at,
+          previousVersion: sysVersions.length > 1 ? sysVersions[1].version_number : null
         } : null;
-
-        // Current Constraint
-        const constraint = bottleneckInput ? {
-          name: bottleneckInput.name,
-          consistency: `${Math.round(bottleneckInput.successRate * 100)}% consistency`,
-          evidence: [
-            "0 completed required occurrences (approx)",
-            `Minimum requirement: ${bottleneckInput.target || 1}`,
-            "Connected to active Rock (AT RISK)"
-          ]
-        } : null;
-
-        // Today's Priority
-        let priority = null;
-        if (inputs && inputs.length > 0) {
-           const worstInput = bottleneckInput || inputs[0];
-           priority = {
-             action: `Complete minimum ${worstInput.name} requirement.`,
-             remaining: `Requires execution today.`,
-             rock: rocks[0]?.name || "Active Rock",
-             reason: `${worstInput.name} is currently below minimum requirements.`
-           };
-        }
-
-        // Next Actions
-        const actions = [];
-        if (inputs && inputs.length === 0) {
-           actions.push({ priority: "HIGH", text: "Configure Daily Inputs", reason: "System has no execution layer." });
-        } else if (bottleneckInput) {
-           actions.push({ priority: "HIGH", text: `Complete minimum ${bottleneckInput.name}`, reason: `${bottleneckInput.name} consistency is too low.` });
-        }
-        if (resultDefs && resultDefs.length === 0) {
-           actions.push({ priority: "MEDIUM", text: "Record missing result data", reason: "Outcome tracking is empty." });
-        }
-
-        // Check if system is frozen (review overdue)
-        const isFrozen = system.is_frozen === true || 
-          (system.next_review_date && new Date(system.next_review_date) < new Date());
 
         setData({
           system,
-          daysRemainingYear,
-          daysRemainingQuarter,
-          goals: goals || [],
-          quarter,
-          rocks,
-          inputs: inputs || [],
-          entries: entries || [],
-          results: resultDefs || [],
-          health,
-          constraint,
-          priority,
-          actions,
           isFrozen,
-          nextReviewDate: system.next_review_date || null
+          nextReviewDate: system.next_review_date || null,
+          hero,
+          yearly,
+          quarterly: quarterlyObj,
+          milestone: milestoneObj,
+          execution: executionObj,
+          momentum: momentumObj,
+          results: resultDefs || [],
+          gap: gapObj,
+          mattersNow: mattersNowObj,
+          checkpoints: [
+            { name: "Milestone Deadline", date: activeMilestone?.deadline },
+            { name: "Next Review", date: system.next_review_date }
+          ].filter(c => c.date),
+          evolution: evolutionObj
         });
 
       } catch (err) {

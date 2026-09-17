@@ -331,7 +331,7 @@ export default function BillingPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-6 animate-in fade-in duration-500 text-ink">
+    <div className="w-full mx-auto py-12 px-6 animate-in fade-in duration-500 text-ink">
       
       <div className="text-center mb-16 relative">
         <div className="absolute -top-6 left-0 text-xs text-ink/50 font-mono">
@@ -342,14 +342,14 @@ export default function BillingPage() {
         <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4 uppercase tracking-tight">
            Your Ledger Subscription
         </h1>
-        <p className="text-lg text-ink/70 max-w-2xl mx-auto">
+        <p className="text-lg text-ink/70 w-full mx-auto">
           Manage your billing, view your current plan, and access payment history.
         </p>
       </div>
 
       {checkoutStep === 1 && (
         <>
-          <div className="border border-divider bg-white p-8 mb-16 max-w-2xl mx-auto">
+          <div className="border border-divider bg-white p-8 mb-16 w-full mx-auto">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-1">Current Status</div>
@@ -385,7 +385,7 @@ export default function BillingPage() {
           </div>
 
           {/* Payment History Table */}
-          <div className="mt-8 max-w-4xl mx-auto">
+          <div className="mt-8 w-full mx-auto">
             <h3 className="text-sm font-bold uppercase tracking-widest text-ink mb-4">Payment History</h3>
             {payments.length > 0 ? (
               <div className="bg-white border border-divider overflow-x-auto">
@@ -429,7 +429,7 @@ export default function BillingPage() {
       )}
 
       {checkoutStep === 2 && (
-        <div className="max-w-6xl mx-auto">
+        <div className="w-full mx-auto">
           <button onClick={() => setCheckoutStep(1)} className="text-[10px] font-bold uppercase tracking-widest text-ink/50 hover:text-ink mb-6">← Back to billing</button>
           <div className="flex items-end justify-between gap-6 mb-8">
             <div>

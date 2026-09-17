@@ -2,65 +2,102 @@ import Link from "next/link";
 
 export default function TimelineEvent({ event, isLast }) {
   
-  const getEventStyle = (type) => {
+  const getBadgeStyle = (type) => {
     switch (type) {
       case 'SYSTEM_VERSION':
-        return { color: 'text-ink', border: 'border-ink', label: 'bg-ink text-paper' };
+        return 'bg-blue-100 text-blue-800';
       case 'REVIEW':
-        return { color: 'text-ochre', border: 'border-ochre/30', label: 'bg-white border-ochre/30 text-ochre' };
+        return 'bg-purple-100 text-purple-800';
       case 'INSIGHT':
-        return { color: 'text-ink/70', border: 'border-divider', label: 'bg-white border-divider text-ink/70' };
+        return 'bg-amber-100 text-amber-800';
       case 'VALIDATION':
-        return { color: 'text-moss', border: 'border-moss/30', label: 'bg-white border-moss/30 text-moss' };
+        return 'bg-green-100 text-green-800';
       case 'EXPERIMENT':
-        return { color: 'text-ink/50', border: 'border-divider', label: 'bg-white border-divider text-ink/50' };
+        return 'bg-gray-100 text-gray-800';
       default:
-        return { color: 'text-ink/50', border: 'border-divider', label: 'bg-white border-divider text-ink/50' };
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const style = getEventStyle(event.type);
+  const badgeStyle = getBadgeStyle(event.type);
 
   return (
-    <div className="relative pl-8 pb-12 group">
+    <div className="relative pl-8 pb-8 group">
       {/* Vertical line connecting events */}
       {!isLast && (
-        <div className="absolute left-0 top-6 bottom-0 w-px bg-divider group-hover:bg-ink/20 transition-colors" />
+        <div className="absolute left-[5px] top-6 bottom-0 w-[2px] bg-gray-100" />
       )}
       
       {/* Node dot */}
-      <div className={`absolute left-[-4px] top-1.5 w-2 h-2 ${style.label.includes('bg-ink') ? 'bg-ink' : 'bg-white border-2 border-divider'}`} />
+      <div className="absolute left-0 top-6 w-3 h-3 rounded-full bg-gray-300 border-[3px] border-white shadow-sm ring-1 ring-gray-100" />
 
-      {/* Content */}
-      <div className={`border-l-2 pl-6 ${style.border}`}>
-        <div className="flex flex-wrap items-center gap-3 mb-2">
-          <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border ${style.label}`}>
+      {/* Content Card */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+        <div className="flex flex-wrap items-center gap-3 mb-3">
+          <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${badgeStyle}`}>
             {event.type.replace('_', ' ')}
           </span>
-          <span className="text-xs font-mono text-ink/50">
+          <span className="text-sm text-gray-500">
             {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
           {event.version && (
-            <span className="text-[10px] font-bold uppercase tracking-widest text-ink/40">
+            <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
               v{event.version}
             </span>
           )}
         </div>
         
-        <h3 className={`text-lg font-bold mb-2 ${style.color}`}>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
           {event.title}
         </h3>
         
-        <p className="text-sm text-ink/80 leading-relaxed mb-4 max-w-2xl">
+        <p className="text-sm text-gray-600 leading-relaxed mb-4">
           {event.description}
         </p>
 
+        {event.type === 'SYSTEM_VERSION' && event.snapshot && (
+          <div className="mb-4 space-y-4">
+            {(event.snapshot.milestone_achieved || event.snapshot.result_triggered) && (
+              <div className="bg-orange-50 rounded-lg p-4">
+                {event.snapshot.milestone_achieved && (
+                  <div className="mb-2">
+                    <div className="text-xs font-medium text-orange-800 mb-1">Milestone Achieved</div>
+                    <div className="font-semibold text-orange-950 text-base">{event.snapshot.milestone_achieved}</div>
+                  </div>
+                )}
+                {event.snapshot.result_triggered && (
+                  <div>
+                    <div className="text-xs font-medium text-orange-800/70 mb-1 mt-3">Triggered By Result</div>
+                    <div className="text-sm text-orange-900 bg-orange-100/50 px-2 py-1 rounded inline-block">{event.snapshot.result_triggered}</div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {event.snapshot.inputs && Object.keys(event.snapshot.inputs).length > 0 && (
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                <div className="text-xs font-medium text-gray-500 mb-3">Active Inputs (Snapshot)</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {Object.entries(event.snapshot.inputs).map(([key, val]) => (
+                    <div key={key} className="bg-white p-2 rounded border border-gray-100 shadow-sm">
+                      <div className="text-xs text-gray-500 mb-1 truncate" title={key}>{key}</div>
+                      <div className="text-sm font-medium text-gray-900 truncate" title={String(val)}>
+                        {String(val)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {event.meta && (
-          <div className="flex flex-wrap gap-x-6 gap-y-2 mb-4 text-xs">
+          <div className="flex flex-wrap gap-x-4 gap-y-2 mb-4">
             {Object.entries(event.meta).map(([key, value]) => (
-              <div key={key}>
-                <span className="text-ink/40 uppercase tracking-widest text-[9px] mr-2">{key}:</span>
-                <span className="font-mono text-ink/80">{value}</span>
+              <div key={key} className="flex items-center text-sm">
+                <span className="text-gray-500 mr-1.5">{key}:</span>
+                <span className="font-medium text-gray-900 bg-gray-50 px-2 py-0.5 rounded">{value}</span>
               </div>
             ))}
           </div>
@@ -69,9 +106,9 @@ export default function TimelineEvent({ event, isLast }) {
         {event.link && (
           <Link 
             href={event.link}
-            className="text-[10px] font-bold uppercase tracking-widest text-ink/50 hover:text-ink transition-colors"
+            className="inline-flex items-center text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors"
           >
-            View Record →
+            View Record <span className="ml-1">→</span>
           </Link>
         )}
       </div>

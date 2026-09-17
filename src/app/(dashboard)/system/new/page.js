@@ -30,42 +30,46 @@ export default function SystemCreationFlow() {
   ];
 
   return (
-    <div className="min-h-screen bg-paper text-ink font-sans selection:bg-text-ochre selection:text-paper">
+    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
       {/* Header */}
-      <header className="border-b border-divider bg-paper px-8 py-4">
-        <div className="mx-auto max-w-5xl flex justify-between items-center">
+      <header className="bg-white border-b border-gray-200 px-8 py-4">
+        <div className="mx-auto w-full flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-6 h-6 border border-divider bg-paper flex items-center justify-center">
-              <span className="text-ink font-bold text-[10px]">OS</span>
+            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600">
+              <span className="font-bold text-xs">OS</span>
             </div>
-            <span className="font-semibold text-sm tracking-widest uppercase text-ink">System Architect</span>
+            <span className="font-semibold text-gray-900">System Architect</span>
           </div>
-          <div className="text-xs text-ink font-mono tracking-wider border border-divider px-2 py-1">
-            STEP {currentStep} OF 6
+          <div className="text-sm text-gray-500 font-medium bg-gray-100 rounded-full px-3 py-1">
+            Step {currentStep} of 6
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="mx-auto max-w-3xl px-6 py-16">
+      <main className="mx-auto w-full px-6 py-12">
         
         {/* Progress Tracker */}
         <div className="mb-12">
           <div className="flex items-center justify-between relative">
             {/* Connecting Lines */}
-            <div className="absolute top-1/2 left-0 w-full h-[1px] -translate-y-1/2 bg-divider -z-10" />
+            <div className="absolute top-1/2 left-0 w-full h-[2px] -translate-y-1/2 bg-gray-200 -z-10" />
+            <div 
+              className="absolute top-1/2 left-0 h-[2px] -translate-y-1/2 bg-orange-600 -z-10 transition-all duration-300" 
+              style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+            />
             
-            {steps.map((step, idx) => (
-              <div key={step.id} className="flex flex-col items-center bg-paper px-2">
+            {steps.map((step) => (
+              <div key={step.id} className="flex flex-col items-center relative">
                 <div 
-                  className={`w-8 h-8 border flex items-center justify-center text-xs font-semibold
-                    ${currentStep === step.id ? "border-text-ochre text-text-ochre bg-paper" : 
-                      currentStep > step.id ? "border-ink text-ink bg-paper" : "border-divider text-divider bg-paper"}`}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors duration-300
+                    ${currentStep === step.id ? "bg-orange-600 text-white shadow-md shadow-orange-200" : 
+                      currentStep > step.id ? "bg-orange-600 text-white" : "bg-white text-gray-400 border-2 border-gray-200"}`}
                 >
-                  {currentStep > step.id ? <Check className="w-4 h-4" /> : step.id}
+                  {currentStep > step.id ? <Check className="w-5 h-5" /> : step.id}
                 </div>
-                <span className={`absolute -bottom-6 text-[10px] uppercase tracking-wider whitespace-nowrap font-medium
-                  ${currentStep === step.id ? "text-text-ochre" : "text-ink"}`}>
+                <span className={`absolute -bottom-7 text-xs font-medium whitespace-nowrap
+                  ${currentStep === step.id ? "text-orange-600" : currentStep > step.id ? "text-gray-900" : "text-gray-400"}`}>
                   {step.name}
                 </span>
               </div>
@@ -73,10 +77,8 @@ export default function SystemCreationFlow() {
           </div>
         </div>
 
-        <hr className="border-divider mb-8" />
-
         {/* Step Content Rendering */}
-        <div className="bg-paper border border-divider p-10">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 sm:p-10">
           {currentStep === 1 && <Step1Identity />}
           {currentStep === 2 && <Step2Goals />}
           {currentStep === 3 && <Step3Roadmap />}

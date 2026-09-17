@@ -4,22 +4,29 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { LayoutDashboard, Settings2, CheckSquare, Target, ClipboardList, Lightbulb, History, CreditCard, UserRound } from "lucide-react";
+import { LayoutDashboard, Settings2, CheckSquare, Target, ClipboardList, Lightbulb, History, CreditCard, UserRound, Search, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 
 const renderTally = (count) => {
   if (!count || count <= 0) return null;
-  return <span className="font-serif text-[10px] tracking-[-0.15em] text-ink/40 ml-2">{'|'.repeat(count)}</span>;
+  return (
+    <span className="flex gap-0.5 ml-auto pl-2">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="w-1 h-3 bg-ochre/40 rounded-full" />
+      ))}
+    </span>
+  );
 };
 
 const TallyToggle = ({ onClick, collapsed }) => (
   <button 
     onClick={onClick}
-    className="hover:text-ochre transition-colors p-2 text-ink/70"
-    title="Toggle margin"
+    className="hover:bg-black/5 p-1.5 rounded-md transition-colors text-ink-muted hover:text-ink"
+    title="Toggle sidebar"
   >
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square">
-      <path d={collapsed ? "M8 4v8 M12 4v8" : "M4 4v8 M8 4v8 M12 4v8"} />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+      <line x1="9" y1="3" x2="9" y2="21"></line>
     </svg>
   </button>
 );
@@ -130,44 +137,46 @@ export function LedgerSidebar({ children }) {
   const mainNav = [
     { label: "Dashboard", href: "/dashboard", shortcut: "d", icon: LayoutDashboard },
     { label: "System", href: "/system", shortcut: "s", icon: Settings2 },
-    { label: "Daily Inputs", href: "/inputs", shortcut: "i", tally: 3, icon: CheckSquare },
-    { label: "Results", href: "/results", shortcut: "r", icon: Target },
-    { label: "Review", href: "/reviews", shortcut: "v", tally: 1, icon: ClipboardList },
+    { label: "Inputs", href: "/inputs", shortcut: "i", tally: 3, icon: CheckSquare },
+    { label: "Reviews", href: "/reviews", shortcut: "v", tally: 1, icon: ClipboardList },
     { label: "Insights", href: "/insights", shortcut: "k", icon: Lightbulb },
+    { label: "Results", href: "/results", shortcut: "r", icon: Target },
     { label: "History", href: "/history", shortcut: "h", icon: History },
-    { label: "Billing", href: "/billing", shortcut: "b", icon: CreditCard },
   ];
 
   const isReviewContext = pathname?.includes("/reviews");
   const isInsightsContext = pathname?.includes("/insights");
 
-  // Avoid hydration mismatch by not rendering layout specific stuff until mounted
-  if (!mounted) return <div className="min-h-screen bg-paper text-ink" />;
+  if (!mounted) return <div className="min-h-screen bg-background text-ink" />;
 
   return (
-    <div className="flex min-h-screen w-full bg-paper text-ink">
+    <div className="flex min-h-screen w-full bg-background text-ink font-sans">
       
       {/* SIDEBAR */}
       <div 
         ref={sidebarRef}
-        className="fixed inset-y-0 left-0 bg-paper z-40 flex flex-col transition-[width] duration-300 ease-in-out border-r border-divider"
-        style={{ width: isCollapsed ? 56 : width }}
+        className="fixed inset-y-0 left-0 bg-sidebar z-40 flex flex-col transition-[width] duration-300 ease-in-out border-r border-divider/50 shadow-sm"
+        style={{ width: isCollapsed ? 64 : width }}
       >
         <div 
-          className="absolute top-0 right-[-2px] bottom-0 w-1 cursor-col-resize hover:bg-ochre transition-colors z-50 flex items-center justify-center"
+          className="absolute top-0 right-[-2px] bottom-0 w-1 cursor-col-resize hover:bg-ochre/20 transition-colors z-50 flex items-center justify-center"
           onMouseDown={startResizing}
         >
         </div>
 
-        <div className={`flex pt-8 pb-8 ${isCollapsed ? 'flex-col items-center px-3 gap-6' : 'items-center px-8 justify-between'}`}>
+        <div className={`flex py-6 ${isCollapsed ? 'flex-col items-center px-2 gap-4' : 'items-center px-6 justify-between'}`}>
           {!isCollapsed && (
-            <Link href="/" className="flex items-center gap-3">
-              <Image src="/assets/logo1.png" alt="Logo" width={20} height={20} className="grayscale contrast-125" />
-              <span className="font-serif font-bold text-ink tracking-tight uppercase text-xs">Working Ledger</span>
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="w-8 h-8 rounded-lg bg-ochre/10 flex items-center justify-center group-hover:bg-ochre/20 transition-colors">
+                <Image src="/assets/logo1.png" alt="Logo" width={16} height={16} className="opacity-90" />
+              </div>
+              <span className="font-semibold text-ink text-[15px] tracking-tight">Working Ledger</span>
             </Link>
           )}
           {isCollapsed && (
-             <Image src="/assets/logo1.png" alt="Logo" width={20} height={20} className="grayscale contrast-125" />
+            <div className="w-8 h-8 rounded-lg bg-ochre/10 flex items-center justify-center">
+              <Image src="/assets/logo1.png" alt="Logo" width={16} height={16} className="opacity-90" />
+            </div>
           )}
           <div className="z-50 relative">
             <TallyToggle onClick={toggleCollapse} collapsed={isCollapsed} />
@@ -175,44 +184,44 @@ export function LedgerSidebar({ children }) {
         </div>
 
         {!isCollapsed && (
-          <div className="px-8 mb-8">
+          <div className="px-4 mb-6">
             <button 
               onClick={() => setCmdOpen(true)}
-              className="w-full flex justify-between items-center text-[10px] font-mono text-ink/40 uppercase tracking-widest hover:text-ink/70 transition-colors border-b border-divider/50 pb-2 cursor-text"
+              className="w-full flex items-center justify-between text-sm text-ink-muted bg-white/50 hover:bg-white border border-divider/50 hover:border-divider shadow-sm rounded-lg px-3 py-2 transition-all cursor-text group"
             >
-              <span>Command</span>
-              <span>⌘K</span>
+              <div className="flex items-center gap-2">
+                <Search size={14} className="text-ink-muted group-hover:text-ink transition-colors" />
+                <span className="font-medium group-hover:text-ink transition-colors">Search...</span>
+              </div>
+              <div className="flex items-center gap-1 text-[11px] font-medium bg-black/5 px-1.5 py-0.5 rounded text-ink-muted">
+                <span>⌘</span><span>K</span>
+              </div>
             </button>
           </div>
         )}
 
-        <nav className={`flex-1 overflow-y-auto hide-scrollbar ${isCollapsed ? 'px-0' : 'px-8'} flex flex-col gap-3 text-sm font-sans font-medium`}>
+        <nav className={`flex-1 overflow-y-auto hide-scrollbar ${isCollapsed ? 'px-2' : 'px-4'} flex flex-col gap-1 text-[14px] font-medium`}>
           {mainNav.map((item) => {
             const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
             return (
               <div key={item.href} className="relative group flex items-center">
                 {!isCollapsed && (
-                  <span className={`absolute -left-5 text-[10px] font-mono font-bold text-moss transition-opacity ${showShortcuts ? 'opacity-100' : 'opacity-0'}`}>
+                  <span className={`absolute -left-1 text-[10px] font-medium text-ochre/80 transition-opacity ${showShortcuts ? 'opacity-100' : 'opacity-0'}`}>
                     {item.shortcut}
                   </span>
                 )}
                 
                 <Link 
                   href={item.href} 
-                  className={`relative flex items-center w-full ${isCollapsed ? 'justify-center py-2' : 'py-1'}`}
+                  className={`relative flex items-center w-full transition-all ${isCollapsed ? 'justify-center p-2 rounded-xl' : 'px-3 py-2 rounded-lg'} ${isActive ? 'bg-white shadow-sm border border-divider/40 text-ink' : 'text-ink-muted hover:bg-black/5 hover:text-ink border border-transparent'}`}
                   title={isCollapsed ? item.label : undefined}
                 >
-                  <span className={`
-                    transition-all 
-                    ${isCollapsed ? 'opacity-50 hover:opacity-100 flex items-center justify-center' : ''} 
-                    ${isActive ? 'text-ink' : 'text-ink/60 hover:text-ink'}
-                  `}>
-                    {!isCollapsed ? (
-                      <span className={isActive ? "border-b border-ochre pb-0.5" : "border-b border-transparent pb-0.5"}>
+                  <span className="flex items-center gap-3 w-full">
+                    <item.icon size={isCollapsed ? 20 : 18} strokeWidth={isActive ? 2 : 1.5} className={isActive ? 'text-ochre' : ''} />
+                    {!isCollapsed && (
+                      <span className="truncate">
                         {item.label}
                       </span>
-                    ) : (
-                      <item.icon size={20} strokeWidth={1.5} />
                     )}
                   </span>
                   
@@ -223,43 +232,69 @@ export function LedgerSidebar({ children }) {
           })}
 
           {!isCollapsed && isReviewContext && (
-            <div className="mt-4 pl-4 border-l border-divider/50 flex flex-col gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-ochre mb-1">Active Context</span>
-              <Link href="/reviews" className="text-sm text-ink border-b border-ochre pb-0.5 self-start">Current Draft</Link>
-              <Link href="/history" className="text-sm text-ink/60 hover:text-ink pb-0.5 self-start">Past Records {renderTally(4)}</Link>
+            <div className="mt-4 mb-2 mx-3 border-l-2 border-divider flex flex-col gap-1 animate-in fade-in slide-in-from-left-2 duration-300">
+              <span className="text-[11px] font-semibold text-ink-muted ml-3 mb-1">Active Context</span>
+              <Link href="/reviews" className="text-[13px] font-medium text-ink bg-white shadow-sm border border-divider/40 rounded-md px-3 py-1.5 ml-1.5">Current Draft</Link>
+              <Link href="/history" className="text-[13px] text-ink-muted hover:bg-black/5 hover:text-ink rounded-md px-3 py-1.5 ml-1.5 flex justify-between items-center">
+                Past Records {renderTally(4)}
+              </Link>
             </div>
           )}
 
           {!isCollapsed && isInsightsContext && (
-            <div className="mt-4 pl-4 border-l border-divider/50 flex flex-col gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-ochre mb-1">Active Context</span>
-              <Link href="/insights" className="text-sm text-ink border-b border-ochre pb-0.5 self-start">All Insights {renderTally(4)}</Link>
-              <Link href="/insights?filter=validated" className="text-sm text-ink/60 hover:text-ink pb-0.5 self-start">Validated {renderTally(1)}</Link>
-              <Link href="/insights?filter=hypotheses" className="text-sm text-ink/60 hover:text-ink pb-0.5 self-start">Hypotheses {renderTally(1)}</Link>
+            <div className="mt-4 mb-2 mx-3 border-l-2 border-divider flex flex-col gap-1 animate-in fade-in slide-in-from-left-2 duration-300">
+              <span className="text-[11px] font-semibold text-ink-muted ml-3 mb-1">Active Context</span>
+              <Link href="/insights" className="text-[13px] font-medium text-ink bg-white shadow-sm border border-divider/40 rounded-md px-3 py-1.5 ml-1.5 flex justify-between items-center">
+                All Insights {renderTally(4)}
+              </Link>
+              <Link href="/insights?filter=validated" className="text-[13px] text-ink-muted hover:bg-black/5 hover:text-ink rounded-md px-3 py-1.5 ml-1.5 flex justify-between items-center">
+                Validated {renderTally(1)}
+              </Link>
+              <Link href="/insights?filter=hypotheses" className="text-[13px] text-ink-muted hover:bg-black/5 hover:text-ink rounded-md px-3 py-1.5 ml-1.5 flex justify-between items-center">
+                Hypotheses {renderTally(1)}
+              </Link>
             </div>
           )}
 
         </nav>
 
         {/* Footer Status & Profile */}
-        <div className={`mt-auto border-t border-divider/50 pt-4 pb-6 ${isCollapsed ? 'px-2 flex flex-col items-center' : 'px-8 flex flex-col gap-4'}`}>
+        <div className={`mt-auto border-t border-divider/50 pt-3 pb-4 ${isCollapsed ? 'px-2 flex flex-col items-center gap-3' : 'px-4 flex flex-col gap-3'}`}>
           {!isCollapsed && (
-            <Link href="/profile" className="flex items-center justify-between w-full p-2 border border-divider hover:border-ochre hover:bg-white/50 transition-colors group">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-ink text-paper flex items-center justify-center font-serif text-sm font-bold">
+            <div className="flex items-center justify-between px-3">
+              <div className="text-[11px] font-medium text-ink-muted flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-moss/80 relative">
+                  <div className="absolute inset-0 rounded-full bg-moss animate-ping opacity-50"></div>
+                </div>
+                Synced
+              </div>
+            </div>
+          )}
+          {isCollapsed && (
+            <div className="w-1.5 h-1.5 rounded-full bg-moss/80 relative" title="System synced">
+              <div className="absolute inset-0 rounded-full bg-moss animate-ping opacity-50"></div>
+            </div>
+          )}
+
+          {!isCollapsed && (
+            <Link href="/profile" className="flex items-center justify-between w-full p-2 rounded-xl border border-transparent hover:border-divider/50 hover:bg-white/60 hover:shadow-sm transition-all group">
+              <div className="flex items-center gap-2.5 overflow-hidden">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-ochre/20 to-ochre/10 border border-ochre/20 text-ochre flex items-center justify-center text-sm font-semibold shadow-sm shrink-0">
                   {(userName || userEmail || "U").charAt(0).toUpperCase()}
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-ink leading-none truncate max-w-[150px]">{userName || "Loading..."}</span>
+                <div className="flex flex-col truncate">
+                  <span className="text-[13px] font-semibold text-ink truncate leading-tight">{userName || "Loading..."}</span>
+                  <span className="text-[11px] text-ink-muted truncate leading-tight">{userEmail || "user@example.com"}</span>
                 </div>
               </div>
-              <UserRound size={15} className="text-ink/30 group-hover:text-ochre transition-colors" />
+              <ChevronRight size={16} className="text-ink-muted group-hover:text-ink transition-colors shrink-0" />
             </Link>
           )}
+          
           {isCollapsed && (
             <Link
               href="/profile"
-              className="w-8 h-8 bg-ink text-paper flex items-center justify-center font-serif text-sm font-bold mb-4 cursor-pointer hover:bg-ochre transition-colors"
+              className="w-10 h-10 rounded-full bg-gradient-to-tr from-ochre/20 to-ochre/10 border border-ochre/20 text-ochre flex items-center justify-center text-sm font-semibold shadow-sm hover:shadow transition-all shrink-0"
               title={`${userName || "User"} profile`}
             >
               {(userName || userEmail || "U").charAt(0).toUpperCase()}
@@ -272,35 +307,35 @@ export function LedgerSidebar({ children }) {
                 await supabase.auth.signOut();
                 window.location.href = "/login";
               }}
-              className="text-[10px] font-bold uppercase tracking-widest text-ink/40 hover:text-ochre transition-colors p-2"
+              className="text-[10px] font-medium text-ink-muted hover:text-ochre transition-colors p-2"
               title="Log out"
             >
-              OUT
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
             </button>
           )}
 
           {!isCollapsed && (
-            <div className="flex justify-end -mt-3">
+            <div className="px-3">
               <button 
                 onClick={async () => {
                   const { supabase } = await import('@/lib/supabase/client');
                   await supabase.auth.signOut();
                   window.location.href = '/login';
                 }}
-                className="text-[10px] font-bold uppercase tracking-widest text-ink/40 hover:text-ochre transition-colors p-2"
-                title="Log out"
+                className="w-full text-left text-[12px] font-medium text-ink-muted hover:text-ink transition-colors flex items-center gap-2"
               >
-                OUT
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                Log out
               </button>
             </div>
-          )}
-
-          {!isCollapsed ? (
-            <div className="text-[10px] font-serif text-ink/70 mt-2">
-              Last updated 2 min ago
-            </div>
-          ) : (
-            <div className="w-2 h-2 rounded-full bg-moss mx-auto opacity-50" title="System synced" />
           )}
         </div>
       </div>
@@ -308,51 +343,52 @@ export function LedgerSidebar({ children }) {
       {/* MAIN CONTENT AREA */}
       <div 
         className="flex flex-col flex-1 w-full transition-[padding] duration-300 ease-in-out"
-        style={{ paddingLeft: isCollapsed ? 56 : width }}
+        style={{ paddingLeft: isCollapsed ? 64 : width }}
       >
-        <div className="lg:hidden border-b border-divider p-4 flex justify-between items-center bg-paper sticky top-0 z-50">
-          <h2 className="font-serif font-bold text-lg tracking-tight">Working Ledger</h2>
-          <span className="text-[10px] uppercase tracking-widest border border-divider px-2 py-1">Menu</span>
+        <div className="lg:hidden border-b border-divider/50 p-4 flex justify-between items-center bg-background sticky top-0 z-50">
+          <h2 className="font-semibold text-lg tracking-tight">Working Ledger</h2>
+          <button className="p-2 rounded-lg bg-white border border-divider shadow-sm text-sm font-medium">Menu</button>
         </div>
         
-        <main className="flex-1 w-full max-w-5xl mx-auto px-6 lg:px-16 py-12">
+        <main className="flex-1 w-full p-4 md:p-6 lg:p-8">
           {children}
         </main>
       </div>
 
       {/* COMMAND PALETTE */}
       {cmdOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
-          <div className="absolute inset-0 bg-paper/80 backdrop-blur-sm" onClick={() => setCmdOpen(false)} />
-          <div className="relative w-full max-w-xl bg-paper border border-divider shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center px-4 border-b border-divider">
-              <span className="text-ochre mr-3 font-mono">{'>'}</span>
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] px-4">
+          <div className="absolute inset-0 bg-ink/20 backdrop-blur-sm" onClick={() => setCmdOpen(false)} />
+          <div className="relative w-full max-w-xl bg-paper border border-divider shadow-2xl rounded-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+            <div className="flex items-center px-4 border-b border-divider/50 bg-white">
+              <Search size={18} className="text-ochre mr-3" />
               <input 
                 type="text" 
                 autoFocus
-                placeholder="Jump to section, insight, or record..." 
-                className="w-full bg-transparent py-4 text-ink font-serif text-lg focus:outline-none placeholder:text-ink/30"
+                placeholder="Search anything..." 
+                className="w-full bg-transparent py-4 text-ink text-base font-medium focus:outline-none placeholder:text-ink-muted"
               />
             </div>
-            <div className="p-2 max-h-[40vh] overflow-y-auto">
-              <div className="px-3 py-1 text-[10px] font-bold text-ink/40 uppercase tracking-widest mt-2 mb-1">Navigation</div>
+            <div className="p-2 max-h-[40vh] overflow-y-auto bg-background/50">
+              <div className="px-3 py-2 text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Navigation</div>
               {mainNav.map(n => (
                 <Link 
                   key={n.href}
                   href={n.href} 
                   onClick={() => setCmdOpen(false)}
-                  className="block px-3 py-2 text-sm text-ink hover:bg-black/5 flex justify-between items-center group"
+                  className="flex items-center px-3 py-2.5 text-sm text-ink hover:bg-white hover:shadow-sm rounded-xl transition-all group border border-transparent hover:border-divider/50 mx-1"
                 >
-                  <span>{n.label}</span>
-                  <span className="text-[10px] font-mono text-ink/30 opacity-0 group-hover:opacity-100 transition-opacity border border-divider/50 px-1 rounded-sm">
+                  <n.icon size={16} className="mr-3 text-ink-muted group-hover:text-ochre transition-colors" />
+                  <span className="flex-1 font-medium">{n.label}</span>
+                  <span className="text-[11px] font-medium text-ink-muted bg-white border border-divider/50 px-1.5 py-0.5 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
                     {n.shortcut}
                   </span>
                 </Link>
               ))}
             </div>
-            <div className="px-4 py-2 border-t border-divider/50 bg-black/5 text-[10px] text-ink/50 flex justify-between">
-              <span>ESC to close</span>
-              <span>↵ to select</span>
+            <div className="px-4 py-3 border-t border-divider/50 bg-sidebar/50 text-[11px] text-ink-muted flex justify-between font-medium">
+              <span className="flex items-center gap-1">Press <kbd className="bg-white border border-divider/50 px-1 rounded shadow-sm">ESC</kbd> to close</span>
+              <span className="flex items-center gap-1">Press <kbd className="bg-white border border-divider/50 px-1 rounded shadow-sm">↵</kbd> to select</span>
             </div>
           </div>
         </div>

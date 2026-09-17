@@ -18,7 +18,7 @@ export default function ReviewCenter() {
       try {
         const { data: systems } = await supabase
           .from("systems")
-          .select("id, name")
+          .select("id, name, start_date")
           .eq("status", "active")
           .limit(1);
 
@@ -39,130 +39,128 @@ export default function ReviewCenter() {
         setLoading(false);
       }
     }
-
     fetchReviews();
   }, []);
 
   const handleStartReview = async (type) => {
-    const mockId = `draft-${Date.now()}`;
-    const mockSnapshots = {
-      goals: [{ name: "Revenue", target: 100, actual: 72 }],
-      inputs: [{ name: "Calls", target: 20, actual: 12 }],
-      milestones: [{ name: "Get 10 leads", target: 10, actual: 6 }]
-    };
-
+    // Generate an ID for the new review
+    const newId = `rev_${Date.now()}`;
+    
+    // We will initialize a basic context and redirect. 
+    // The actual data fetching will happen inside the review engine [id] route.
     initReview({
-      id: mockId,
+      id: newId,
+      systemId: activeSystem.id,
       type: type,
-      periodStart: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      periodEnd: new Date().toISOString().split('T')[0]
-    }, mockSnapshots);
+      periodStart: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      periodEnd: new Date().toISOString().split("T")[0]
+    }, { goals: [], inputs: [], milestones: [] });
 
-    router.push(`/reviews/${mockId}`);
+    router.push(`/reviews/${newId}`);
   };
 
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="text-sm font-semibold animate-pulse uppercase tracking-widest text-moss">Loading Ledger...</div>
+        <div className="text-sm font-semibold animate-pulse text-gray-500">Loading Ledger...</div>
       </div>
     );
   }
 
   if (!activeSystem) {
     return (
-      <div className="max-w-2xl py-12 animate-in fade-in duration-500">
-        <h2 className="text-2xl font-serif font-bold text-ink mb-4">No Active System</h2>
-        <hr className="border-divider mb-8" />
-        <p className="text-ink max-w-md">You need an active system before you can review performance.</p>
+      <div className="w-full py-12 animate-in fade-in duration-500">
+        <h2 className="text-2xl font-semibold text-gray-900 mb-4">No Active System</h2>
+        <hr className="border-gray-200 mb-8" />
+        <p className="text-gray-600 max-w-md">You need an active system before you can review performance.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl animate-in fade-in duration-500">
+    <div className="w-full animate-in fade-in duration-500 pb-24">
       
       <div className="mb-12">
-        <h1 className="text-3xl font-serif font-bold text-ink mb-1">Diagnostic Review</h1>
-        <p className="text-ink/70 text-sm mb-6">Understand what happened. Find the constraint. Decide what changes next.</p>
-        <hr className="border-divider mb-8" />
+        <h1 className="text-3xl font-semibold text-gray-900 mb-2">Diagnostic Review</h1>
+        <p className="text-gray-500 text-sm mb-6">Investigate what happened. Evolve your operating inputs.</p>
+        <hr className="border-gray-200 mb-8" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
-        <div>
-          <h2 className="text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-4">Pending Diagnostic</h2>
-          
-          <div className="border-2 border-ink p-6 bg-white relative">
-            <div className="absolute top-0 right-0 bg-ink text-paper px-3 py-1 text-[10px] font-bold uppercase tracking-widest">
-              DUE NOW
-            </div>
-            <h3 className="text-xl font-serif font-bold text-ink mb-2">Weekly Review</h3>
-            <div className="text-sm text-ink/70 mb-8 font-mono">Sep 1 — Sep 7</div>
-            
-            <button 
-              onClick={() => handleStartReview('WEEKLY')}
-              className="bg-ink text-paper px-6 py-2 text-sm font-bold uppercase tracking-widest hover:bg-ink/80 transition-colors w-full"
-            >
-              Start Investigation →
-            </button>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
+        
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Weekly</h3>
+            <p className="text-sm text-gray-600 mb-8 leading-relaxed">Analyze execution consistency and milestone progress over the past 7 days.</p>
           </div>
+          <button onClick={() => handleStartReview("WEEKLY")} className="bg-orange-600 text-white rounded-lg px-4 py-3 text-sm font-semibold hover:bg-orange-700 transition-colors w-full">Start Weekly</button>
         </div>
 
-        <div>
-          <h2 className="text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-4">Upcoming Schedule</h2>
-          
-          <table className="w-full text-sm">
-            <tbody>
-              <tr className="border-b border-divider/50 opacity-50">
-                <td className="py-4 font-bold text-ink">Monthly Review</td>
-                <td className="py-4 text-right text-ink font-mono">Opens in 14 days</td>
-              </tr>
-              <tr className="border-b border-divider/50 opacity-50">
-                <td className="py-4 font-bold text-ink">Quarterly Review</td>
-                <td className="py-4 text-right text-ink font-mono">Opens in 45 days</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Monthly</h3>
+            <p className="text-sm text-gray-600 mb-8 leading-relaxed">Aggregate the entire month. Identify bottlenecks and structural changes.</p>
+          </div>
+          <button onClick={() => handleStartReview("MONTHLY")} className="bg-orange-600 text-white rounded-lg px-4 py-3 text-sm font-semibold hover:bg-orange-700 transition-colors w-full">Start Monthly</button>
         </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Quarterly</h3>
+            <p className="text-sm text-gray-600 mb-8 leading-relaxed">Major checkpoint. Compare expected vs actual for the entire quarterly goal.</p>
+          </div>
+          <button onClick={() => handleStartReview("QUARTERLY")} className="bg-orange-600 text-white rounded-lg px-4 py-3 text-sm font-semibold hover:bg-orange-700 transition-colors w-full">Start Quarterly</button>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Yearly</h3>
+            <p className="text-sm text-gray-600 mb-8 leading-relaxed">Deep analysis of strategic performance and long-term operating evolution.</p>
+          </div>
+          <button onClick={() => handleStartReview("YEARLY")} className="bg-orange-600 text-white rounded-lg px-4 py-3 text-sm font-semibold hover:bg-orange-700 transition-colors w-full">Start Yearly</button>
+        </div>
+
       </div>
 
       <div>
-        <h2 className="text-lg font-serif font-bold text-ink mb-2">Historical Records</h2>
-        <hr className="border-divider mb-4" />
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">Historical Records</h2>
+        <hr className="border-gray-200 mb-4" />
         
         {reviews.length === 0 ? (
-          <p className="text-ink/50 text-sm italic py-4">No past reviews found in the ledger.</p>
+          <p className="text-gray-500 text-sm py-4">No past reviews found in the ledger.</p>
         ) : (
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="border-b border-divider">
-                <th className="py-3 font-normal text-[10px] uppercase tracking-widest text-ink/50">Type</th>
-                <th className="py-3 font-normal text-[10px] uppercase tracking-widest text-ink/50">Period</th>
-                <th className="py-3 font-normal text-[10px] uppercase tracking-widest text-ink/50">Status</th>
-                <th className="py-3 font-normal text-[10px] uppercase tracking-widest text-ink/50 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reviews.map((review) => (
-                <tr key={review.id} className="border-b border-divider/50 hover:bg-white/30 transition-colors">
-                  <td className="py-4 font-bold text-ink">{review.type}</td>
-                  <td className="py-4 font-mono text-ink/70">{review.period_start} — {review.period_end}</td>
-                  <td className="py-4">
-                    {review.status === 'COMPLETED' ? (
-                      <span className="text-moss text-[10px] font-bold uppercase tracking-widest">Completed</span>
-                    ) : (
-                      <span className="text-ochre text-[10px] font-bold uppercase tracking-widest">Draft</span>
-                    )}
-                  </td>
-                  <td className="py-4 text-right">
-                    <Link href={`/reviews/${review.id}`} className="text-xs font-bold uppercase tracking-widest text-ink/50 hover:text-ink transition-colors">
-                      View Record →
-                    </Link>
-                  </td>
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 font-semibold text-gray-600">Type</th>
+                  <th className="px-6 py-3 font-semibold text-gray-600">Period</th>
+                  <th className="px-6 py-3 font-semibold text-gray-600">Status</th>
+                  <th className="px-6 py-3 font-semibold text-gray-600 text-right">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {reviews.map((review) => (
+                  <tr key={review.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 font-semibold text-gray-900">{review.type}</td>
+                    <td className="px-6 py-4 font-mono text-gray-600">{review.period_start} → {review.period_end}</td>
+                    <td className="px-6 py-4">
+                      {review.status === "COMPLETED" ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">Completed</span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">Draft</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Link href={`/reviews/${review.id}`} className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors">
+                        View Record →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

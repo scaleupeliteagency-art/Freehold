@@ -2,17 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
-import InsightCard from "@/components/insights/InsightCard";
+import { Loader2, Zap } from "lucide-react";
 
 export default function InsightsCenter() {
   const [loading, setLoading] = useState(true);
-  const [insights, setInsights] = useState([]);
+  const [synthesizing, setSynthesizing] = useState(false);
   const [activeSystem, setActiveSystem] = useState(null);
   
-  const [synthesis, setSynthesis] = useState(null);
+  const [dataPayload, setDataPayload] = useState(null);
+  const [insights, setInsights] = useState([]);
 
   useEffect(() => {
-    async function fetchInsights() {
+    async function fetchData() {
       try {
         const { data: systems } = await supabase
           .from("systems")
@@ -21,152 +22,155 @@ export default function InsightsCenter() {
           .limit(1);
 
         if (systems && systems.length > 0) {
-          setActiveSystem(systems[0]);
+          const sys = systems[0];
+          setActiveSystem(sys);
           
-          const { data: history } = await supabase
-            .from("insights")
+          // Fetch system_versions
+          const { data: system_versions } = await supabase
+            .from("system_versions")
             .select("*")
-            .eq("system_id", systems[0].id)
+            .eq("system_id", sys.id)
+            .order("created_at", { ascending: false });
+
+          // Fetch result_definitions with records
+          const { data: result_definitions } = await supabase
+            .from("result_definitions")
+            .select(`
+              *,
+              result_records (*)
+            `)
+            .eq("system_id", sys.id);
+
+          // Fetch reviews
+          const { data: reviews } = await supabase
+            .from("reviews")
+            .select("*")
+            .eq("system_id", sys.id)
             .order("created_at", { ascending: false });
             
-          if (history && history.length > 0) {
-            setInsights(history);
-            setSynthesis({
-              title: "System Execution is stabilizing, but outcomes are lagging.",
-              text: "Execution has improved over the last 30 days, but outcome performance has not improved at the same rate. The largest measurable constraint currently appears to be the quality of the 'Qualified Prospects' milestone rather than raw activity volume.",
-              evidence: "Based on 3 completed reviews and 42 days of input tracking."
-            });
-          } else {
-            const mockData = [
-              {
-                id: "1",
-                type: "PATTERN",
-                status: "ACTIVE",
-                confidence: "HIGH",
-                title: "Follow-up Consistency",
-                description: "Higher follow-up consistency has been associated with stronger meeting performance.",
-                evidence: { observations: 94, duration: "8 weeks" }
-              },
-              {
-                id: "2",
-                type: "HYPOTHESIS",
-                status: "ACTIVE",
-                confidence: "MEDIUM",
-                title: "Increased Follow-ups",
-                description: "Increasing follow-up attempts from 2 to 5 may increase booked meetings.",
-                evidence: { observations: 14, duration: "2 weeks" }
-              },
-              {
-                id: "3",
-                type: "VALIDATED",
-                status: "VALIDATED",
-                confidence: "HIGH",
-                title: "Morning Deep Work",
-                description: "Scheduling deep work before 10 AM produced a 40% increase in weekly code output.",
-                evidence: { observations: 45, duration: "6 weeks" }
-              },
-              {
-                id: "4",
-                type: "OBSERVATION",
-                status: "ACTIVE",
-                confidence: "HIGH",
-                title: "Outreach Volume Increase",
-                description: "Outreach volume increased 31% over the previous month.",
-                evidence: { observations: 120, duration: "4 weeks" }
-              }
-            ];
-            setInsights(mockData);
-            setSynthesis({
-              title: "System Execution is stabilizing, but outcomes are lagging.",
-              text: "Execution has improved over the last 30 days, but outcome performance has not improved at the same rate. The largest measurable constraint currently appears to be the quality of the 'Qualified Prospects' milestone rather than raw activity volume.",
-              evidence: "Based on 3 completed reviews and 42 days of input tracking."
-            });
-          }
+          setDataPayload({
+            system_versions,
+            result_definitions,
+            reviews
+          });
         }
       } catch (err) {
-        console.error("Error fetching insights:", err);
+        console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchInsights();
+    fetchData();
   }, []);
+
+  async function handleSynthesize() {
+    if (!dataPayload) return;
+    setSynthesizing(true);
+    try {
+      const res = await fetch("/api/ai/insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataPayload })
+      });
+      const json = await res.json();
+      if (json && json.insights) {
+        setInsights(json.insights);
+      }
+    } catch (err) {
+      console.error("Error calling AI API", err);
+    } finally {
+      setSynthesizing(false);
+    }
+  }
 
   if (loading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
-        <div className="text-sm font-semibold animate-pulse uppercase tracking-widest text-moss">Loading Ledger...</div>
+        <div className="text-sm font-medium animate-pulse text-gray-500">Loading Insights...</div>
       </div>
     );
   }
 
   if (!activeSystem) {
     return (
-      <div className="max-w-2xl py-12 animate-in fade-in duration-500">
-        <h2 className="text-2xl font-serif font-bold text-ink mb-4">No Active System</h2>
-        <hr className="border-divider mb-8" />
-        <p className="text-ink max-w-md">You need an active system to accumulate knowledge.</p>
+      <div className="w-full py-12 animate-in fade-in duration-500">
+        <h2 className="text-2xl font-semibold text-gray-900 mb-4">No Active System</h2>
+        <p className="text-gray-500 max-w-md">You need an active system to accumulate knowledge.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl animate-in fade-in duration-500">
+    <div className="w-full animate-in fade-in duration-500 pb-20">
       
-      <div className="mb-12">
-        <h1 className="text-3xl font-serif font-bold text-ink mb-1">Insights Archive</h1>
-        <p className="text-ink/70 text-sm mb-6">Turn your history into knowledge that improves the system.</p>
-        <hr className="border-divider mb-6" />
-        
-        <div className="flex flex-wrap gap-12 text-sm border-b border-divider pb-6">
-          <div>
-            <div className="text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-1">Total Insights</div>
-            <div className="text-ink font-semibold text-lg">{insights.length}</div>
-          </div>
-          <div>
-            <div className="text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-1">Hypotheses</div>
-            <div className="text-ochre font-semibold text-lg">{insights.filter(i => i.type === 'HYPOTHESIS').length}</div>
-          </div>
-          <div>
-            <div className="text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-1">Validated</div>
-            <div className="text-moss font-semibold text-lg">{insights.filter(i => i.type === 'VALIDATED').length}</div>
-          </div>
-        </div>
+      <div className="mb-10">
+        <h1 className="text-3xl font-semibold text-gray-900 mb-2">Insights Archive</h1>
+        <p className="text-gray-500 text-sm">Turn your history into knowledge that improves the system.</p>
       </div>
 
-      {synthesis && (
-        <div className="mb-12 border border-divider p-8 bg-white">
-          <div className="text-[10px] font-bold text-ochre uppercase tracking-widest mb-4">
-            Evidence-Based Synthesis
-          </div>
-          <h3 className="text-xl font-serif font-bold text-ink mb-4 leading-tight max-w-2xl">
-            {synthesis.title}
-          </h3>
-          <p className="text-sm text-ink/80 mb-6 leading-relaxed max-w-3xl">
-            {synthesis.text}
+      <div className="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-6 p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
+        <div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Quarterly Analysis</h3>
+          <p className="text-sm text-gray-500 max-w-xl leading-relaxed">
+            Aggregate execution history, version changes, and results to generate hypotheses about your system's constraints and opportunities.
           </p>
-          <div className="border-t border-divider/50 pt-4">
-            <span className="text-xs font-mono text-ink/50">{synthesis.evidence}</span>
+        </div>
+        <button 
+          onClick={handleSynthesize} 
+          disabled={synthesizing}
+          className="flex items-center justify-center gap-2 bg-orange-600 text-white px-6 py-3 rounded-lg font-medium text-sm hover:bg-orange-700 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+        >
+          {synthesizing ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Synthesizing...
+            </>
+          ) : (
+            <>
+              <Zap className="w-4 h-4" />
+              Synthesize Insights
+            </>
+          )}
+        </button>
+      </div>
+
+      {insights.length > 0 && (
+        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-700 fade-in">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Synthesized Findings</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {insights.map((insight, idx) => (
+              <div key={idx} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col h-full hover:shadow-md transition-shadow">
+                <div className="mb-5">
+                  <span className="inline-block bg-gray-100 text-gray-700 rounded-full px-3 py-1 text-xs font-medium">
+                    {insight.category}
+                  </span>
+                </div>
+                
+                <div className="mb-6 flex-grow">
+                  <div className="text-xs font-semibold text-blue-800 mb-2 uppercase tracking-wide">
+                    Observed Fact
+                  </div>
+                  <div className="bg-blue-50 text-blue-900 rounded-xl p-5 text-sm leading-relaxed border border-blue-100/50">
+                    {insight.observed_fact}
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="text-xs font-semibold text-orange-800 mb-2 uppercase tracking-wide flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5" />
+                    AI Hypothesis
+                  </div>
+                  <div className="bg-orange-50 text-orange-950 rounded-xl p-5 text-sm leading-relaxed border border-orange-100/50">
+                    {insight.ai_hypothesis}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
-
-      <div>
-        <h2 className="text-lg font-serif font-bold text-ink mb-2">Knowledge Library</h2>
-        <hr className="border-divider mb-8" />
-
-        {insights.length === 0 ? (
-          <p className="text-ink/50 text-sm italic py-4">No insights yet. Keep recording, reviewing, and testing. Insights emerge from accumulated evidence.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {insights.map(insight => (
-              <InsightCard key={insight.id} insight={insight} />
-            ))}
-          </div>
-        )}
-      </div>
-
     </div>
   );
 }

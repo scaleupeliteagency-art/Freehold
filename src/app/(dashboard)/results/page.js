@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import RecordResultModal from "./components/RecordResultModal";
 
-export default function ResultsPage() {
+function ResultsContent() {
   const [loading, setLoading] = useState(true);
   const [activeSystem, setActiveSystem] = useState(null);
   const [results, setResults] = useState([]);
@@ -15,8 +15,35 @@ export default function ResultsPage() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  const [handoffMilestoneName, setHandoffMilestoneName] = useState(null);
+  const [handoffDefinitionId, setHandoffDefinitionId] = useState(null);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const handoff = searchParams.get('handoff');
+  const milestoneId = searchParams.get('milestone');
+
+  useEffect(() => {
+    async function handleHandoff() {
+      if (handoff === 'true' && milestoneId && activeSystem) {
+        // Fetch milestone name
+        const { data: milestone } = await supabase.from('weekly_milestones').select('name').eq('id', milestoneId).single();
+        if (milestone) {
+          setHandoffMilestoneName(milestone.name);
+          
+          // Check if there is a result definition connected to it
+          // Or we can just check if any of the loaded results has it if we fetched them
+          const { data: def } = await supabase.from('result_definitions').select('id').eq('connected_milestone_id', milestoneId).single();
+          if (def) {
+            setHandoffDefinitionId(def.id);
+            setIsModalOpen(true); // Pop open modal
+          }
+        }
+      }
+    }
+    handleHandoff();
+  }, [handoff, milestoneId, activeSystem]);
 
   useEffect(() => {
     async function fetchResults() {
@@ -134,6 +161,11 @@ export default function ResultsPage() {
       
       setIsModalOpen(false);
       setRefreshTrigger(prev => prev + 1);
+      
+      // Clear handoff from url to avoid reappearing
+      if (handoff === 'true') {
+        router.replace('/results');
+      }
     } catch (err) {
       console.error("Error saving result:", err);
       alert("Failed to save result.");
@@ -150,7 +182,7 @@ export default function ResultsPage() {
 
   if (!activeSystem) {
     return (
-      <div className="max-w-2xl py-12 animate-in fade-in duration-500">
+      <div className="w-full py-12 animate-in fade-in duration-500">
         <h2 className="text-2xl font-serif font-bold text-ink mb-4">No Active System</h2>
         <hr className="border-divider mb-8" />
         <p className="text-ink max-w-md">You need an active system to record results.</p>
@@ -159,8 +191,23 @@ export default function ResultsPage() {
   }
 
   return (
-    <div className="max-w-6xl animate-in fade-in duration-500">
+    <div className="w-full animate-in fade-in duration-500">
       
+      {handoff === 'true' && handoffMilestoneName && !handoffDefinitionId && (
+        <div className="bg-ochre/10 border-2 border-ochre/40 p-6 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-pulse">
+          <div>
+            <div className="text-[10px] font-bold text-ochre uppercase tracking-widest mb-1">Milestone Achieved</div>
+            <h2 className="text-xl font-serif font-bold text-ink">You achieved: {handoffMilestoneName}. What was the exact measurable result generated?</h2>
+            <p className="text-sm text-ink/70 mt-1">There is no measurable result connected to this milestone. Please define one to continue the Ledger.</p>
+          </div>
+          <button 
+            className="bg-ochre text-paper text-sm font-bold uppercase tracking-widest py-2 px-6 shrink-0 hover:bg-ochre/80 transition-colors"
+          >
+            Define Result
+          </button>
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
         <div>
@@ -381,8 +428,17 @@ export default function ResultsPage() {
         onClose={() => setIsModalOpen(false)}
         definitions={results}
         onSave={handleSaveResult}
+        initialDefinitionId={handoffDefinitionId}
       />
 
     </div>
+  );
+}
+
+export default function ResultsPage() {
+  return (
+    <Suspense fallback={<div className="flex h-[50vh] items-center justify-center"><div className="text-sm font-bold animate-pulse uppercase tracking-widest text-ink/50">Loading Outcomes...</div></div>}>
+      <ResultsContent />
+    </Suspense>
   );
 }

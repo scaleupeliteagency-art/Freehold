@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-export default function RecordResultModal({ isOpen, onClose, definitions, onSave }) {
-  const [definitionId, setDefinitionId] = useState("");
+export default function RecordResultModal({ isOpen, onClose, definitions, onSave, initialDefinitionId }) {
+  const [definitionId, setDefinitionId] = useState(initialDefinitionId || "");
   const [periodLabel, setPeriodLabel] = useState("");
   const [actualValue, setActualValue] = useState("");
   const [targetValue, setTargetValue] = useState("");
@@ -14,8 +14,15 @@ export default function RecordResultModal({ isOpen, onClose, definitions, onSave
 
   // Initialize definitionId when opened if not set
   if (isOpen && !definitionId && definitions.length > 0) {
-    setDefinitionId(definitions[0].id);
+    setDefinitionId(initialDefinitionId || definitions[0].id);
   }
+
+  // Effect to update if initialDefinitionId changes while open
+  useEffect(() => {
+    if (initialDefinitionId) {
+      setDefinitionId(initialDefinitionId);
+    }
+  }, [initialDefinitionId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

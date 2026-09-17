@@ -26,44 +26,44 @@ export default function Step1Identity() {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2 tracking-tight uppercase">System Identity</h2>
-        <p className="text-sm leading-relaxed">
+        <h2 className="text-2xl font-semibold mb-2 text-gray-900">System Identity</h2>
+        <p className="text-sm text-gray-500 leading-relaxed">
           The first step is establishing the identity and core purpose of your system. 
           What is this system called, and why does it exist?
         </p>
       </div>
 
-      <hr className="border-divider mb-8" />
+      <hr className="border-gray-100 mb-8" />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         <div>
-          <label className="block text-sm font-medium mb-2 uppercase tracking-wider text-text-ochre">System Name</label>
+          <label className="block text-sm font-medium mb-2 text-gray-700">System Name</label>
           <input 
             type="text"
             {...register("name")}
             placeholder="e.g. Ascend Growth System"
-            className="w-full bg-paper border border-divider px-4 py-3 text-ink focus:outline-none focus:border-text-ochre transition-all placeholder:text-ink/50"
+            className="w-full rounded-lg border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white outline-none transition-all"
           />
           {errors.name && <p className="mt-2 text-xs text-red-500">{errors.name.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2 uppercase tracking-wider text-text-ochre">Why does this system exist?</label>
+          <label className="block text-sm font-medium mb-2 text-gray-700">Why does this system exist?</label>
           <textarea 
             {...register("why")}
             placeholder="e.g. Build Ascend into a profitable international acquisition agency and create financial independence."
             rows={4}
-            className="w-full bg-paper border border-divider px-4 py-3 text-ink focus:outline-none focus:border-text-ochre transition-all placeholder:text-ink/50 resize-none"
+            className="w-full rounded-lg border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white outline-none transition-all resize-none"
           />
           {errors.why && <p className="mt-2 text-xs text-red-500">{errors.why.message}</p>}
         </div>
 
-        <hr className="border-divider" />
+        <hr className="border-gray-100" />
 
         <div className="pt-2 flex justify-end">
           <button 
             type="submit"
-            className="bg-paper border border-divider text-ink px-8 py-3 text-sm font-semibold hover:bg-text-ochre hover:text-paper transition-all uppercase"
+            className="bg-orange-600 text-white hover:bg-orange-700 rounded-lg font-medium px-4 py-2 transition-colors"
           >
             Continue to Goals
           </button>

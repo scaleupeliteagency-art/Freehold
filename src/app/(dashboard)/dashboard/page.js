@@ -1,149 +1,97 @@
 "use client";
-
+import React from "react";
 import { useDashboardEngine } from "@/lib/hooks/useDashboardEngine";
 import { 
-  DashboardHeader,
-  NorthStarLedger,
-  QuarterLedger,
-  RocksLedger,
-  TodayLedger,
-  ResultsLedger,
-  BusinessBuild,
-  ConstraintAndActions,
-  ExecutionLedger,
-  SystemHealthDiagnostic,
-  SystemIntelligence
+  HeroWidget, 
+  YearlyWidget, 
+  QuarterlyCommand, 
+  MilestoneFocus, 
+  ExecutionAndMomentum, 
+  SystemStateWidgets 
 } from "@/components/dashboard/DashboardWidgets";
-import { GoalTrajectory } from "@/components/dashboard/GoalTrajectory";
-import Link from "next/link";
 
 export default function DashboardPage() {
   const { 
-    loading, system, goals, quarter, rocks, inputs, entries, results, health, constraint, priority, actions,
-    daysRemainingYear, daysRemainingQuarter, isFrozen, nextReviewDate
+    loading, 
+    system, 
+    isFrozen, 
+    hero, 
+    yearly, 
+    quarterly, 
+    milestone, 
+    execution, 
+    momentum, 
+    gap, 
+    mattersNow, 
+    evolution 
   } = useDashboardEngine();
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-sm font-semibold animate-pulse uppercase tracking-widest text-moss">Loading Ledger...</div>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="animate-spin w-8 h-8 border-4 border-gray-200 border-t-gray-900 rounded-full"></div>
       </div>
     );
   }
 
   if (!system) {
-    const draftExists = typeof window !== 'undefined' && localStorage.getItem('system-creation-storage');
-    let hasDraft = false;
-    try {
-      if (draftExists) {
-        const parsed = JSON.parse(draftExists);
-        if (parsed?.state?.currentStep > 1) hasDraft = true;
-      }
-    } catch(e) {}
-
     return (
-      <div className="max-w-2xl py-12 animate-in fade-in duration-500">
-        <h2 className="text-2xl font-serif font-bold text-ink mb-4">No Active System</h2>
-        <hr className="border-divider mb-8" />
-        <p className="text-ink max-w-md mb-8 leading-relaxed">
-          The working ledger requires an active operating system to begin tracking execution.
-        </p>
-        <Link 
-          href="/system/new"
-          className="border border-ink text-ink px-6 py-2 text-sm font-semibold hover:bg-ink hover:text-paper transition-colors uppercase tracking-widest"
-        >
-          {hasDraft ? "Continue Draft" : "Initialize System"}
-        </Link>
+      <div className="p-8 w-full">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center max-w-2xl mx-auto mt-20">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">No Active System</h2>
+          <p className="text-gray-500 mb-8">You need to initialize a system to view the dashboard.</p>
+          <a href="/system/new" className="px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-black transition-colors">
+            Initialize System
+          </a>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="animate-in fade-in duration-500 max-w-5xl pb-24">
-      {/* SCHEDULED BANNER */}
-      {system.status === "scheduled" && (
-        <div className="mb-10 border-2 border-ochre bg-ochre/10 p-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-ochre mb-2">System Scheduled</div>
-              <h2 className="text-2xl font-serif font-bold uppercase tracking-tight mb-2 text-ink">AWAITING START DATE</h2>
-              <p className="text-sm text-ink/80 max-w-xl leading-relaxed">
-                Your system is scheduled to start on <strong>{new Date(system.start_date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong>. Tracking and execution will begin automatically on that date.
-              </p>
-            </div>
-          </div>
+    <div className="w-full space-y-8 animate-in fade-in duration-500 pb-24">
+      {/* 1. HERO - Current Position */}
+      <HeroWidget hero={hero} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column - Strategy & Trajectory (2/3 width) */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* 2. YEARLY */}
+          <YearlyWidget yearly={yearly} />
+          
+          {/* 3. QUARTERLY */}
+          <QuarterlyCommand quarterly={quarterly} />
+
+          {/* 4. CURRENT MILESTONE & DRIVERS */}
+          <MilestoneFocus milestone={milestone} execution={execution} />
+
+          {/* 5. EXECUTION & MOMENTUM (Heatmap) */}
+          <ExecutionAndMomentum execution={execution} momentum={momentum} />
         </div>
-      )}
 
-      {/* FROZEN BANNER */}
-      {isFrozen && system.status !== "scheduled" && (
-        <div className="mb-10 border-2 border-ink bg-ink text-paper p-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-paper/60 mb-2">⚠ System Status</div>
-              <h2 className="text-2xl font-serif font-bold uppercase tracking-tight mb-2">SYSTEM FROZEN</h2>
-              <p className="text-sm text-paper/80 max-w-xl leading-relaxed">
-                Your weekly review was due on <strong>{nextReviewDate ? new Date(nextReviewDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) : 'an earlier date'}</strong>. Daily input tracking is suspended until you complete the mandatory review. The system will unfreeze immediately upon completion.
-              </p>
-            </div>
-            <div className="shrink-0">
-              <Link
-                href="/reviews"
-                className="block border border-paper text-paper px-8 py-4 text-[10px] font-bold uppercase tracking-widest hover:bg-paper hover:text-ink transition-colors text-center"
-              >
-                Complete Review →
-              </Link>
-            </div>
-          </div>
+        {/* Right Column - Status & Actions (1/3 width) */}
+        <div className="lg:col-span-1">
+          {/* GAP, NEXT ACTION, EVOLUTION */}
+          <SystemStateWidgets gap={gap} mattersNow={mattersNow} evolution={evolution} />
         </div>
-      )}
-
-      {/* 1. HEADER */}
-      <DashboardHeader system={system} quarter={quarter} />
-
-      {/* 2. NORTH STAR */}
-      <NorthStarLedger goals={goals} daysRemainingYear={daysRemainingYear} />
-
-      {/* 3. CURRENT QUARTER */}
-      <QuarterLedger quarter={quarter} daysRemainingQuarter={daysRemainingQuarter} />
-
-      {/* 4. CURRENT ROCKS */}
-      <RocksLedger rocks={rocks} />
-
-      {/* 5 & 6. TODAY'S EXECUTION & PRIORITY */}
-      {(isFrozen || system.status === "scheduled") ? (
-        <div className="mb-12 border border-divider p-8 opacity-40 pointer-events-none select-none">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-ink/50 mb-2">Daily Inputs — {system.status === "scheduled" ? "Scheduled" : "Suspended"}</div>
-          <p className="text-sm text-ink/70">{system.status === "scheduled" ? "Execution will unlock on start date." : "Complete the mandatory weekly review to unlock daily input tracking."}</p>
-        </div>
-      ) : (
-        <TodayLedger inputs={inputs} priority={priority} />
-      )}
-
-      {/* 7. RESULTS */}
-      <ResultsLedger results={results} />
-
-      {/* 8. BUSINESS BUILD */}
-      <BusinessBuild />
-
-      {/* 9 & 10. CURRENT CONSTRAINT & NEXT ACTIONS */}
-      <ConstraintAndActions constraint={constraint} actions={actions} />
-
-      {/* 11. EXECUTION */}
-      <ExecutionLedger inputs={inputs} entries={entries} />
-
-      {/* 12. GOAL TRAJECTORY */}
-      <div className="mb-12">
-        <h2 className="text-xl font-serif font-bold text-ink mb-4 uppercase">Goal Trajectory</h2>
-        <hr className="border-divider border-t-2 mb-6" />
-        <GoalTrajectory goal={goals[0]} />
       </div>
 
-      {/* 13. SYSTEM HEALTH */}
-      <SystemHealthDiagnostic health={health} />
-
-      {/* 14. SYSTEM INTELLIGENCE */}
-      <SystemIntelligence />
+      {isFrozen && (
+        <div className="fixed inset-0 z-50 bg-white/60 backdrop-blur-md flex items-center justify-center">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl border border-gray-200 max-w-md w-full text-center">
+            <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Review Required</h2>
+            <p className="text-gray-500 text-sm mb-6">Your system is frozen. You must complete your scheduled review before continuing execution.</p>
+            <a href="/reviews" className="block w-full py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors">
+              Initialize Diagnostic Review
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
