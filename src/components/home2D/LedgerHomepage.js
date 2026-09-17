@@ -39,10 +39,10 @@ export default function LedgerHomepage() {
       {/* STICKY HEADER */}
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 border-b border-gray-200 backdrop-blur-xl bg-white/80 ${scrolled ? 'translate-y-0 shadow-sm' : '-translate-y-full border-transparent'}`}>
         <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="font-bold text-lg tracking-tight flex items-center gap-2">
+          <div className="font-bold text-lg tracking-tighter flex items-center gap-2">
             <img src="/assets/logo.png" alt="Working Ledger" className="h-6 w-auto" />
           </div>
-          <Link href={user ? "/dashboard" : "/signup"} className="px-5 py-2 text-white bg-orange-600 hover:bg-orange-700 shadow-[0_4px_14px_0_rgba(234,88,12,0.39)] hover:shadow-[0_6px_20px_rgba(234,88,12,0.23)] hover:-translate-y-0.5 text-sm font-bold rounded-md transition-all">
+          <Link href={user ? "/dashboard" : "/signup"} className="px-5 py-2 text-white bg-orange-600 hover:bg-orange-700 shadow-[0_4px_14px_0_rgba(234,88,12,0.4)] hover:shadow-[0_6px_25px_rgba(234,88,12,0.5)] hover:-translate-y-0.5 text-sm font-bold rounded-full transition-all">
             {user ? "Open Dashboard" : "Initialize Your System →"}
           </Link>
         </div>
@@ -56,7 +56,7 @@ export default function LedgerHomepage() {
               <h1 className="text-lg font-bold text-gray-900">Welcome back. Continue your system.</h1>
               <p className="text-sm text-gray-500">Your dashboard is ready with your current milestone and next action.</p>
             </div>
-            <Link href="/dashboard" className="px-6 py-2.5 bg-orange-600 text-white shadow-md text-sm font-bold rounded-md hover:bg-orange-700 transition-colors">
+            <Link href="/dashboard" className="px-6 py-2.5 bg-orange-600 text-white shadow-md text-sm font-bold rounded-full hover:bg-orange-700 transition-colors">
               Open Dashboard →
             </Link>
           </div>
@@ -76,7 +76,7 @@ export default function LedgerHomepage() {
               The Goal Operating System
             </div>
             
-            <h1 className="text-5xl md:text-[72px] font-extrabold text-gray-900 tracking-[-0.03em] leading-[1.05] mb-6">
+            <h1 className="text-5xl md:text-[80px] font-black text-gray-900 tracking-tighterer leading-[1.05] mb-6">
               Stop rebuilding your plan.<br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-orange-400">Start evolving your system.</span>
             </h1>
@@ -86,10 +86,10 @@ export default function LedgerHomepage() {
             </p>
             
             <div className="flex flex-col sm:flex-row items-center gap-4">
-              <Link href="/signup" className="w-full sm:w-auto px-8 py-4 bg-orange-600 text-white shadow-[0_8px_30px_rgb(234,88,12,0.3)] hover:shadow-[0_8px_30px_rgb(234,88,12,0.45)] hover:-translate-y-1 text-base font-bold rounded-lg transition-all duration-200 flex items-center justify-center">
+              <Link href="/signup" className="w-full sm:w-auto px-8 py-4 bg-orange-600 text-white shadow-[0_8px_30px_rgb(234,88,12,0.3)] hover:shadow-[0_8px_40px_rgb(234,88,12,0.6)] hover:-translate-y-1 text-base font-bold rounded-full transition-all duration-200 flex items-center justify-center">
                 Initialize Your System →
               </Link>
-              <a href="#how-it-works" className="w-full sm:w-auto px-8 py-4 bg-white text-gray-900 border-2 border-gray-200 hover:border-gray-900 text-base font-bold rounded-lg transition-all duration-200 flex items-center justify-center">
+              <a href="#how-it-works" className="w-full sm:w-auto px-8 py-4 bg-white text-gray-900 border-2 border-gray-200 hover:border-gray-900 text-base font-bold rounded-full transition-all duration-200 flex items-center justify-center">
                 See how it works
               </a>
             </div>
@@ -150,7 +150,7 @@ export default function LedgerHomepage() {
       <Section num="01" title="THE BUG" alternate={true}>
         <div className="max-w-[800px] mx-auto text-center mb-16">
           <div className="font-mono text-sm font-bold text-red-500 mb-6 tracking-widest uppercase">You've done this before</div>
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-8 text-gray-900">Every system you've tried has the same bug.</h2>
+          <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-8 text-gray-900">Every system you've tried has the same bug.</h2>
           <p className="text-xl text-gray-500 leading-relaxed font-medium">
             You set a goal. You build a plan. You execute — for a while. Then life happens, momentum drops, and you rebuild everything from scratch. The plan resets. The lessons vanish. You're better at starting than any human alive. You've just never had a system smart enough to remember why you stopped.
           </p>
@@ -207,7 +207,7 @@ export default function LedgerHomepage() {
       <Section num="02" title="THE MISSING LAYER">
         <div className="grid md:grid-cols-2 gap-16 items-center">
           <div>
-            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-8 leading-[1.1] text-gray-900">Your goal isn't the system.<br/>The feedback loop is.</h2>
+            <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-8 leading-[1.1] text-gray-900">Your goal isn't the system.<br/>The feedback loop is.</h2>
             <p className="text-xl text-gray-500 mb-6 leading-relaxed font-medium">
               A goal tells you the destination. A plan tells you the route. Neither tells you what to repeatedly do, whether it happened, what you learned, or what should change next. 
             </p>
@@ -241,7 +241,7 @@ export default function LedgerHomepage() {
         <div className="grid lg:grid-cols-12 gap-16">
           <div className="lg:col-span-5 relative">
             <div className="sticky top-32">
-              <h2 className="text-4xl font-extrabold tracking-tight mb-6 text-gray-900">Engineered for Reality.</h2>
+              <h2 className="text-4xl font-black tracking-tighter mb-6 text-gray-900">Engineered for Reality.</h2>
               <p className="text-gray-500 text-lg leading-relaxed mb-8 font-medium">
                 The architecture maps precisely to the reality of executing long-term objectives.
               </p>
@@ -299,7 +299,7 @@ export default function LedgerHomepage() {
       {/* 04 / DIFFERENTIATOR */}
       <Section num="04" title="THE MEMORY LAYER">
         <div className="max-w-[800px] mx-auto text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-8 text-gray-900">Your system gets better because it remembers.</h2>
+          <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-8 text-gray-900">Your system gets better because it remembers.</h2>
           <p className="text-xl text-gray-500 leading-relaxed font-medium">
             Most productivity tools show you today. Working Ledger preserves every version of the system that got you here. Nothing is overwritten. Every iteration becomes evidence for the next one.
           </p>
@@ -349,7 +349,7 @@ export default function LedgerHomepage() {
       {/* 05 / AI PROOF */}
       <Section num="05" title="INVESTIGATION" alternate={true}>
         <div className="max-w-[800px] mx-auto text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-8 text-gray-900">It doesn't cheer you on.<br/>It investigates you.</h2>
+          <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-8 text-gray-900">It doesn't cheer you on.<br/>It investigates you.</h2>
           <p className="text-xl text-gray-500 leading-relaxed font-medium">
             Weekly and monthly reviews run against your actual logged data — not vibes. You get anomalies, correlations, and hypotheses. Then you decide what to change.
           </p>
@@ -376,25 +376,25 @@ export default function LedgerHomepage() {
         <div className="grid md:grid-cols-2 gap-4">
           <div className="bg-gray-50 border border-gray-200 p-10 rounded-2xl relative group hover:bg-white hover:border-orange-200 hover:shadow-lg transition-all duration-300">
             <div className="relative z-10">
-              <h3 className="font-extrabold text-2xl mb-3 text-gray-900 group-hover:text-orange-600 transition-colors">Strategic Layer</h3>
+              <h3 className="font-black text-2xl mb-3 text-gray-900 group-hover:text-orange-600 transition-colors">Strategic Layer</h3>
               <p className="text-gray-500 text-base font-medium">From 5-year vision down to this week's milestone.</p>
             </div>
           </div>
           <div className="bg-gray-50 border border-gray-200 p-10 rounded-2xl relative group hover:bg-white hover:border-orange-200 hover:shadow-lg transition-all duration-300">
             <div className="relative z-10">
-              <h3 className="font-extrabold text-2xl mb-3 text-gray-900 group-hover:text-orange-600 transition-colors">Operating Layer</h3>
+              <h3 className="font-black text-2xl mb-3 text-gray-900 group-hover:text-orange-600 transition-colors">Operating Layer</h3>
               <p className="text-gray-500 text-base font-medium">Daily inputs, targets, frequency, and weight — the levers you actually pull.</p>
             </div>
           </div>
           <div className="bg-gray-50 border border-gray-200 p-10 rounded-2xl relative group hover:bg-white hover:border-orange-200 hover:shadow-lg transition-all duration-300">
             <div className="relative z-10">
-              <h3 className="font-extrabold text-2xl mb-3 text-gray-900 group-hover:text-orange-600 transition-colors">Investigation Layer</h3>
+              <h3 className="font-black text-2xl mb-3 text-gray-900 group-hover:text-orange-600 transition-colors">Investigation Layer</h3>
               <p className="text-gray-500 text-base font-medium">Weekly, monthly, quarterly AI reviews of real execution data.</p>
             </div>
           </div>
           <div className="bg-gray-50 border border-gray-200 p-10 rounded-2xl relative group hover:bg-white hover:border-orange-200 hover:shadow-lg transition-all duration-300">
             <div className="relative z-10">
-              <h3 className="font-extrabold text-2xl mb-3 text-gray-900 group-hover:text-orange-600 transition-colors">Memory Layer</h3>
+              <h3 className="font-black text-2xl mb-3 text-gray-900 group-hover:text-orange-600 transition-colors">Memory Layer</h3>
               <p className="text-gray-500 text-base font-medium">Every result, every version, every decision — permanently timestamped.</p>
             </div>
           </div>
@@ -404,19 +404,19 @@ export default function LedgerHomepage() {
       {/* 07 / PRICING */}
       <Section num="07" title="PRICING" alternate={true} id="pricing">
         <div className="max-w-[600px] mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-6 text-gray-900">One system. One price.<br/>No excuse to restart.</h2>
+          <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-6 text-gray-900">One system. One price.<br/>No excuse to restart.</h2>
           
           <div className="bg-white border-2 border-orange-100 shadow-[0_20px_50px_-12px_rgba(234,88,12,0.15)] p-12 rounded-3xl mt-12 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl"></div>
             <div className="relative z-10">
               <div className="flex items-baseline justify-center mb-4">
-                <span className="text-[80px] leading-none font-extrabold text-gray-900 tracking-tight">$5</span>
+                <span className="text-[80px] leading-none font-black text-gray-900 tracking-tighter">$5</span>
                 <span className="text-2xl text-gray-500 ml-2 font-mono font-bold">/mo</span>
               </div>
               <p className="text-gray-600 mb-10 text-base font-medium max-w-xs mx-auto">
                 Less than the coffee that fuels the plan you'll abandon next month.
               </p>
-              <Link href="/signup" className="block w-full py-5 bg-orange-600 text-white text-lg font-bold rounded-xl shadow-[0_8px_30px_rgb(234,88,12,0.3)] hover:shadow-[0_8px_30px_rgb(234,88,12,0.45)] hover:-translate-y-1 transition-all">
+              <Link href="/signup" className="block w-full py-5 bg-orange-600 text-white text-lg font-bold rounded-full shadow-[0_8px_30px_rgb(234,88,12,0.3)] hover:shadow-[0_8px_40px_rgb(234,88,12,0.6)] hover:-translate-y-1 transition-all">
                 Start Building Your System
               </Link>
               <p className="mt-6 font-mono text-[12px] font-bold text-gray-400">Cancel anytime. Your version history stays yours.</p>
@@ -429,13 +429,13 @@ export default function LedgerHomepage() {
       <Section num="08" title="FAQ">
         <div className="max-w-[800px] mx-auto space-y-10">
           <div className="border-b border-gray-200 pb-10">
-            <h3 className="font-extrabold text-2xl mb-4 text-gray-900">How is this different from Notion or Todoist?</h3>
+            <h3 className="font-black text-2xl mb-4 text-gray-900">How is this different from Notion or Todoist?</h3>
             <p className="text-gray-600 text-lg leading-relaxed font-medium">
               Task managers reset every day. Workspace tools require you to build and maintain the logic yourself. Working Ledger is a pre-built operating system focused specifically on linking daily execution data to long-term milestone progression, and running automated investigation reviews on that data.
             </p>
           </div>
           <div className="border-b border-gray-200 pb-10">
-            <h3 className="font-extrabold text-2xl mb-4 text-gray-900">Do I need to be technical to set this up?</h3>
+            <h3 className="font-black text-2xl mb-4 text-gray-900">Do I need to be technical to set this up?</h3>
             <p className="text-gray-600 text-lg leading-relaxed font-medium">
               No. While the interface is designed to feel like a high-precision instrument, the actual setup process guides you step-by-step from your 5-year goal down to your daily inputs. If you can define what you want and what you need to do to get it, you can run the system.
             </p>
@@ -446,9 +446,9 @@ export default function LedgerHomepage() {
       {/* 09 / FINAL CTA */}
       <section className="py-32 px-6 bg-gray-900 text-center border-t border-gray-800">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-4xl md:text-6xl font-extrabold text-white tracking-tight mb-8">Start with the goal that actually matters.</h2>
+          <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter mb-8">Start with the goal that actually matters.</h2>
           <p className="text-2xl text-gray-400 mb-12 font-medium">Not another plan. A system that remembers.</p>
-          <Link href="/signup" className="inline-flex items-center px-10 py-5 bg-orange-600 text-white text-lg font-bold rounded-xl shadow-[0_8px_30px_rgb(234,88,12,0.3)] hover:shadow-[0_8px_30px_rgb(234,88,12,0.45)] hover:-translate-y-1 transition-all">
+          <Link href="/signup" className="inline-flex items-center px-10 py-5 bg-orange-600 text-white text-lg font-bold rounded-full shadow-[0_8px_30px_rgb(234,88,12,0.3)] hover:shadow-[0_8px_40px_rgb(234,88,12,0.6)] hover:-translate-y-1 transition-all">
             Initialize Your System →
           </Link>
         </div>
