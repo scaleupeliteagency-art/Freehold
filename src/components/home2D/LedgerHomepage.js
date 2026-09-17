@@ -20,6 +20,21 @@ export default function LedgerHomepage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const AdvancedButton = ({ href, children, monoText = "INIT", className = "" }) => (
+    <Link href={href} className={`group relative inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-b from-orange-500 to-orange-600 text-white font-bold rounded-full overflow-hidden transition-all duration-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),_0_8px_30px_rgba(234,88,12,0.4)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.5),_0_12px_40px_rgba(234,88,12,0.6)] hover:-translate-y-1 active:translate-y-0 active:scale-[0.98] ${className}`}>
+      {/* Gloss reflection line */}
+      <div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-full pointer-events-none"></div>
+      {/* Monospace Badge */}
+      <span className="font-mono text-[10px] font-black tracking-widest text-orange-100 border border-white/20 bg-black/10 px-2 py-0.5 rounded-full group-hover:bg-white group-hover:text-orange-600 transition-colors duration-300">
+        {monoText}
+      </span>
+      <span className="flex items-center gap-2">
+        {children}
+        <span className="font-mono transition-transform duration-300 group-hover:translate-x-1">→</span>
+      </span>
+    </Link>
+  );
+
   const Section = ({ num, title, children, alternate = false, id = "" }) => (
     <section id={id} className={`relative border-t border-gray-200 py-24 md:py-32 ${alternate ? 'bg-gray-50' : 'bg-white'}`}>
       <div className="absolute top-0 left-0 px-6 py-2 md:px-12 flex items-center gap-2 font-mono text-[10px] md:text-xs text-gray-400 tracking-widest">
@@ -42,8 +57,10 @@ export default function LedgerHomepage() {
           <div className="font-bold text-lg tracking-tighter flex items-center gap-2">
             <img src="/assets/logo.png" alt="Working Ledger" className="h-6 w-auto" />
           </div>
-          <Link href={user ? "/dashboard" : "/signup"} className="px-5 py-2 text-white bg-orange-600 hover:bg-orange-700 shadow-[0_4px_14px_0_rgba(234,88,12,0.4)] hover:shadow-[0_6px_25px_rgba(234,88,12,0.5)] hover:-translate-y-0.5 text-sm font-bold rounded-full transition-all">
-            {user ? "Open Dashboard" : "Initialize Your System →"}
+          <Link href={user ? "/dashboard" : "/signup"} className="relative group overflow-hidden px-5 py-2 bg-gradient-to-b from-orange-500 to-orange-600 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.3),_0_4px_14px_rgba(234,88,12,0.4)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.4),_0_6px_25px_rgba(234,88,12,0.5)] hover:-translate-y-0.5 text-sm font-bold rounded-full transition-all active:scale-95 flex items-center gap-2">
+            <div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none"></div>
+            {user ? "Open Dashboard" : "Init System"}
+            <span className="font-mono transition-transform duration-300 group-hover:translate-x-1">→</span>
           </Link>
         </div>
       </nav>
@@ -56,8 +73,10 @@ export default function LedgerHomepage() {
               <h1 className="text-lg font-bold text-gray-900">Welcome back. Continue your system.</h1>
               <p className="text-sm text-gray-500">Your dashboard is ready with your current milestone and next action.</p>
             </div>
-            <Link href="/dashboard" className="px-6 py-2.5 bg-orange-600 text-white shadow-md text-sm font-bold rounded-full hover:bg-orange-700 transition-colors">
-              Open Dashboard →
+            <Link href="/dashboard" className="relative group overflow-hidden px-6 py-2.5 bg-gradient-to-b from-orange-500 to-orange-600 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.3),_0_4px_14px_rgba(234,88,12,0.4)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.4),_0_6px_25px_rgba(234,88,12,0.5)] hover:-translate-y-0.5 text-sm font-bold rounded-full transition-all active:scale-95 flex items-center gap-2">
+              <div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none"></div>
+              Open Dashboard
+              <span className="font-mono transition-transform duration-300 group-hover:translate-x-1">→</span>
             </Link>
           </div>
         </div>
@@ -86,9 +105,7 @@ export default function LedgerHomepage() {
             </p>
             
             <div className="flex flex-col sm:flex-row items-center gap-4">
-              <Link href="/signup" className="w-full sm:w-auto px-8 py-4 bg-orange-600 text-white shadow-[0_8px_30px_rgb(234,88,12,0.3)] hover:shadow-[0_8px_40px_rgb(234,88,12,0.6)] hover:-translate-y-1 text-base font-bold rounded-full transition-all duration-200 flex items-center justify-center">
-                Initialize Your System →
-              </Link>
+              <AdvancedButton href="/signup" className="w-full sm:w-auto text-base">Initialize Your System</AdvancedButton>
               <a href="#how-it-works" className="w-full sm:w-auto px-8 py-4 bg-white text-gray-900 border-2 border-gray-200 hover:border-gray-900 text-base font-bold rounded-full transition-all duration-200 flex items-center justify-center">
                 See how it works
               </a>
@@ -416,41 +433,7 @@ export default function LedgerHomepage() {
               <p className="text-gray-600 mb-10 text-base font-medium max-w-xs mx-auto">
                 Less than the coffee that fuels the plan you'll abandon next month.
               </p>
-              <Link href="/signup" className="block w-full py-5 bg-orange-600 text-white text-lg font-bold rounded-full shadow-[0_8px_30px_rgb(234,88,12,0.3)] hover:shadow-[0_8px_40px_rgb(234,88,12,0.6)] hover:-translate-y-1 transition-all">
-                Start Building Your System
-              </Link>
-              <p className="mt-6 font-mono text-[12px] font-bold text-gray-400">Cancel anytime. Your version history stays yours.</p>
-            </div>
-          </div>
-        </div>
-      </Section>
-
-      {/* 08 / FAQ */}
-      <Section num="08" title="FAQ">
-        <div className="max-w-[800px] mx-auto space-y-10">
-          <div className="border-b border-gray-200 pb-10">
-            <h3 className="font-black text-2xl mb-4 text-gray-900">How is this different from Notion or Todoist?</h3>
-            <p className="text-gray-600 text-lg leading-relaxed font-medium">
-              Task managers reset every day. Workspace tools require you to build and maintain the logic yourself. Working Ledger is a pre-built operating system focused specifically on linking daily execution data to long-term milestone progression, and running automated investigation reviews on that data.
-            </p>
-          </div>
-          <div className="border-b border-gray-200 pb-10">
-            <h3 className="font-black text-2xl mb-4 text-gray-900">Do I need to be technical to set this up?</h3>
-            <p className="text-gray-600 text-lg leading-relaxed font-medium">
-              No. While the interface is designed to feel like a high-precision instrument, the actual setup process guides you step-by-step from your 5-year goal down to your daily inputs. If you can define what you want and what you need to do to get it, you can run the system.
-            </p>
-          </div>
-        </div>
-      </Section>
-
-      {/* 09 / FINAL CTA */}
-      <section className="py-32 px-6 bg-gray-900 text-center border-t border-gray-800">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter mb-8">Start with the goal that actually matters.</h2>
-          <p className="text-2xl text-gray-400 mb-12 font-medium">Not another plan. A system that remembers.</p>
-          <Link href="/signup" className="inline-flex items-center px-10 py-5 bg-orange-600 text-white text-lg font-bold rounded-full shadow-[0_8px_30px_rgb(234,88,12,0.3)] hover:shadow-[0_8px_40px_rgb(234,88,12,0.6)] hover:-translate-y-1 transition-all">
-            Initialize Your System →
-          </Link>
+              <AdvancedButton href="/signup" className="px-10 py-5 text-xl" monoText="DEPLOY">Initialize Your System</AdvancedButton>
         </div>
       </section>
 
