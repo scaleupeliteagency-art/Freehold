@@ -340,99 +340,204 @@ export default function LedgerHomepage() {
         <div className="max-w-[800px] mx-auto text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-8 text-slate-900">Watch your system evolve.</h2>
           <p className="text-lg text-slate-500 leading-relaxed font-medium">
-            This is what it looks like to stop planning and start operating. A visual demonstration of autonomous behavior from creating a system, executing daily inputs, to extracting AI insights.
+            This is what it looks like to stop planning and start operating. A visual demonstration of autonomous behavior from executing daily inputs, running reviews, and watching the system compound.
           </p>
         </div>
 
         <div className="max-w-[1000px] mx-auto relative">
           <div className="absolute inset-0 bg-gradient-to-br from-orange-200/20 to-orange-50/20 rounded-[3rem] blur-3xl pointer-events-none"></div>
           
-          <div className="bg-white/80 backdrop-blur-2xl border border-white shadow-2xl shadow-orange-900/10 rounded-[2.5rem] p-10 md:p-14 relative grid grid-cols-1 md:grid-cols-2 gap-10 overflow-hidden">
+          <div className="bg-white/80 backdrop-blur-2xl border border-white shadow-2xl shadow-orange-900/10 rounded-[2.5rem] p-10 md:p-14 relative grid grid-cols-1 md:grid-cols-2 gap-12 overflow-hidden">
             
             {/* Fake Mouse Cursor */}
             <motion.div
-              className="absolute z-50 pointer-events-none drop-shadow-md"
-              initial={{ x: 50, y: 300, opacity: 0 }}
+              className="absolute z-50 pointer-events-none drop-shadow-lg hidden md:block"
+              initial={{ x: 50, y: 350, opacity: 0 }}
               animate={{ 
-                x: [50, 310, 310, 150, 150], 
-                y: [300, 175, 175, 100, 300],
-                opacity: [0, 1, 1, 1, 0] 
+                x: [50, 360, 360, 200, 200, 50, 50, 50], 
+                y: [350, 110, 110, 255, 255, 350, 350, 350],
+                opacity: [0, 1, 1, 1, 1, 0, 0, 0],
+                scale: [1, 1, 0.9, 1, 0.9, 1, 1, 1]
               }}
-              transition={{ repeat: Infinity, duration: 6, ease: "easeInOut", times: [0, 0.2, 0.3, 0.8, 1] }}
+              transition={{ repeat: Infinity, duration: 8, ease: "easeInOut", times: [0, 0.15, 0.2, 0.35, 0.4, 0.5, 0.9, 1] }}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4.33202 2.0526C3.99283 1.76191 3.5 2.00346 3.5 2.45037V21.5496C3.5 21.9965 3.99283 22.2381 4.33202 21.9474L10.5843 16.5878H18.7368C19.1979 16.5878 19.4293 16.0305 19.1037 15.7049L4.33202 2.0526Z" fill="#1E293B" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </motion.div>
             
-            {/* Left side: System Overview & Activity */}
+            {/* Left side: Inputs & Reviews */}
             <div className="space-y-8 flex flex-col justify-center relative z-10">
               
-              {/* Mini System Overview Card */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm shadow-slate-200/50">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              {/* Daily Inputs Card */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm shadow-slate-200/50">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800">Daily Inputs</h4>
+                    <p className="text-[10px] font-mono text-slate-400">TODAY'S EXECUTION</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-50 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                    <motion.div 
+                      className="w-5 h-5 rounded-md border flex items-center justify-center shrink-0"
+                      animate={{ 
+                        backgroundColor: ["#FFFFFF", "#FFFFFF", "#F97316", "#F97316", "#F97316", "#F97316", "#F97316", "#FFFFFF"],
+                        borderColor: ["#E2E8F0", "#E2E8F0", "#F97316", "#F97316", "#F97316", "#F97316", "#F97316", "#E2E8F0"]
+                      }}
+                      transition={{ repeat: Infinity, duration: 8, times: [0, 0.15, 0.2, 0.35, 0.4, 0.5, 0.9, 1] }}
+                    >
+                      <motion.svg 
+                        width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                        animate={{ opacity: [0, 0, 1, 1, 1, 1, 1, 0] }}
+                        transition={{ repeat: Infinity, duration: 8, times: [0, 0.15, 0.2, 0.35, 0.4, 0.5, 0.9, 1] }}
+                      >
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </motion.svg>
+                    </motion.div>
+                    <span className="text-sm font-medium text-slate-700">Outreach 5 Prospects</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-50 bg-slate-50/50">
+                    <div className="w-5 h-5 rounded-md border border-slate-200 bg-white shrink-0"></div>
+                    <span className="text-sm font-medium text-slate-400">Review PR #42</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Weekly Review Card */}
+              <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-800 rounded-2xl p-6 shadow-xl shadow-slate-900/10">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-orange-400">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white">Weekly Review</h4>
+                    <p className="text-[10px] font-mono text-slate-400">PENDING ANALYSIS</p>
+                  </div>
+                </div>
+                
+                <motion.button 
+                  className="w-full bg-white text-slate-900 font-bold text-sm py-3 rounded-xl shadow-sm border border-transparent hover:bg-orange-50 transition-colors flex items-center justify-center gap-2"
+                  animate={{ 
+                    scale: [1, 1, 1, 1, 0.95, 1, 1, 1],
+                    backgroundColor: ["#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFF7ED", "#FFFFFF", "#FFFFFF", "#FFFFFF"],
+                    borderColor: ["transparent", "transparent", "transparent", "transparent", "#FED7AA", "transparent", "transparent", "transparent"]
+                  }}
+                  transition={{ repeat: Infinity, duration: 8, times: [0, 0.15, 0.2, 0.35, 0.4, 0.5, 0.9, 1] }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                  Run Review
+                </motion.button>
+              </div>
+
+            </div>
+
+            {/* Right side: Evolution & Heatmap */}
+            <div className="space-y-8 flex flex-col justify-center relative z-10">
+              
+              {/* Connector line graphic (hidden on mobile) */}
+              <div className="absolute left-[-3rem] top-1/2 -translate-y-1/2 w-12 hidden md:flex items-center z-0">
+                <motion.div 
+                  className="w-full border-t-2 border-dashed border-orange-300"
+                  animate={{ opacity: [0.2, 0.2, 0.2, 0.2, 0.2, 1, 1, 0.2] }}
+                  transition={{ repeat: Infinity, duration: 8, times: [0, 0.15, 0.2, 0.35, 0.4, 0.5, 0.9, 1] }}
+                ></motion.div>
+                <motion.div 
+                  className="w-2.5 h-2.5 rounded-full bg-orange-500 absolute right-0 -mt-1 shadow-[0_0_10px_rgba(249,115,22,0.8)]"
+                  animate={{ 
+                    scale: [1, 1, 1, 1, 1, 1.5, 1.5, 1], 
+                    opacity: [0.3, 0.3, 0.3, 0.3, 0.3, 1, 1, 0.3] 
+                  }}
+                  transition={{ repeat: Infinity, duration: 8, times: [0, 0.15, 0.2, 0.35, 0.4, 0.5, 0.9, 1] }}
+                ></motion.div>
+              </div>
+
+              {/* System Overview Card */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-xl shadow-slate-200/40 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-400/5 rounded-full blur-2xl"></div>
+                
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500 border border-orange-100/50">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-800">Q3 Expansion</h4>
-                      <p className="text-[10px] font-mono text-slate-400">SYS_ID: 8042</p>
+                      <h4 className="text-sm font-bold text-slate-800">System Overview</h4>
+                      <div className="relative h-4 w-16">
+                        <motion.p 
+                          className="text-[10px] font-mono text-slate-400 absolute inset-0"
+                          animate={{ opacity: [1, 1, 1, 1, 1, 0, 0, 1] }}
+                          transition={{ repeat: Infinity, duration: 8, times: [0, 0.15, 0.2, 0.35, 0.4, 0.5, 0.9, 1] }}
+                        >
+                          SYS_V01
+                        </motion.p>
+                        <motion.p 
+                          className="text-[10px] font-mono text-orange-500 font-bold absolute inset-0"
+                          animate={{ opacity: [0, 0, 0, 0, 0, 1, 1, 0] }}
+                          transition={{ repeat: Infinity, duration: 8, times: [0, 0.15, 0.2, 0.35, 0.4, 0.5, 0.9, 1] }}
+                        >
+                          SYS_V02
+                        </motion.p>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right relative w-10 h-8">
                     <motion.span 
-                      className="text-xs font-bold text-slate-700 block"
+                      className="text-sm font-black text-slate-700 absolute top-0 right-0"
+                      animate={{ opacity: [1, 1, 1, 1, 1, 0, 0, 1] }}
+                      transition={{ repeat: Infinity, duration: 8, times: [0, 0.15, 0.2, 0.35, 0.4, 0.5, 0.9, 1] }}
                     >
                       35%
                     </motion.span>
-                    <span className="text-[10px] text-slate-400">Completed</span>
+                    <motion.span 
+                      className="text-sm font-black text-orange-600 absolute top-0 right-0"
+                      animate={{ opacity: [0, 0, 0, 0, 0, 1, 1, 0], scale: [0.8, 0.8, 0.8, 0.8, 0.8, 1.1, 1, 0.8] }}
+                      transition={{ repeat: Infinity, duration: 8, times: [0, 0.15, 0.2, 0.35, 0.4, 0.5, 0.9, 1] }}
+                    >
+                      55%
+                    </motion.span>
+                    <span className="text-[10px] text-slate-400 absolute bottom-0 right-0">Target</span>
                   </div>
                 </div>
                 
                 {/* Progress bar */}
-                <div className="w-full bg-slate-100 h-1.5 rounded-full mb-4 overflow-hidden">
+                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden shadow-inner">
                   <motion.div 
                     className="bg-gradient-to-r from-orange-400 to-orange-500 h-full rounded-full" 
-                    initial={{ width: '0%' }}
-                    animate={{ width: ['0%', '0%', '35%', '35%', '0%'] }}
-                    transition={{ repeat: Infinity, duration: 6, ease: "easeInOut", times: [0, 0.2, 0.4, 0.9, 1] }}
+                    animate={{ width: ['35%', '35%', '35%', '35%', '35%', '55%', '55%', '35%'] }}
+                    transition={{ repeat: Infinity, duration: 8, ease: "easeInOut", times: [0, 0.15, 0.2, 0.35, 0.4, 0.5, 0.9, 1] }}
                   ></motion.div>
-                </div>
-
-                <div className="bg-slate-50 p-3 rounded-xl flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-0.5">Next Action</span>
-                    <span className="text-xs font-bold text-slate-700">Execute Input V02</span>
-                  </div>
-                  <motion.button 
-                    className="bg-white border border-slate-200 shadow-sm text-slate-700 text-xs font-bold px-3 py-1.5 rounded-lg hover:border-orange-200 hover:text-orange-600 transition-colors"
-                    animate={{ scale: [1, 1, 0.9, 1, 1] }}
-                    transition={{ repeat: Infinity, duration: 6, times: [0, 0.23, 0.25, 0.27, 1] }}
-                  >
-                    Start
-                  </motion.button>
                 </div>
               </div>
 
-              {/* Mini Activity Chart */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm shadow-slate-200/50">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wide">Execution Log</h4>
-                  <button className="text-[10px] font-bold bg-orange-50 text-orange-600 px-2 py-1 rounded-md border border-orange-100">Log Reality</button>
+              {/* Execution Log (Heatmap) */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm shadow-slate-200/50">
+                <div className="flex justify-between items-center mb-5">
+                  <h4 className="text-xs font-bold text-slate-800 tracking-wide">Execution Log</h4>
+                  <span className="text-[10px] font-mono text-orange-500 bg-orange-50 px-2 py-1 rounded-md">LIVE</span>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  {[...Array(4)].map((_, rowIndex) => (
-                    <div key={rowIndex} className="flex gap-1.5">
+                  {[...Array(5)].map((_, rowIndex) => (
+                    <div key={rowIndex} className="flex gap-1.5 justify-between">
                       {[...Array(14)].map((_, colIndex) => {
-                        const baseFilled = Math.random() > 0.6;
-                        const animateMe = !baseFilled && Math.random() > 0.7;
+                        // Pre-filled base activity
+                        const baseFilled = (rowIndex * 14 + colIndex) % 7 === 0 || (rowIndex * 14 + colIndex) % 11 === 0;
+                        // Blocks that will animate in at 50%
+                        const animateIn = !baseFilled && ((rowIndex * 14 + colIndex) % 3 === 0);
+                        
                         return (
                           <motion.div 
                             key={colIndex} 
-                            className={`w-3.5 h-3.5 rounded-[3px] ${baseFilled ? 'bg-orange-200' : 'bg-slate-100'}`}
-                            animate={animateMe ? { backgroundColor: ["#F1F5F9", "#F1F5F9", "#F97316", "#FB923C", "#F1F5F9"] } : {}}
-                            transition={animateMe ? { repeat: Infinity, duration: 6, times: [0, 0.4 + Math.random()*0.1, 0.45 + Math.random()*0.1, 0.9, 1] } : {}}
+                            className={`w-4 h-4 rounded-[3px] ${baseFilled ? 'bg-orange-200' : 'bg-slate-100'}`}
+                            animate={animateIn ? { 
+                              backgroundColor: ["#F1F5F9", "#F1F5F9", "#F1F5F9", "#F1F5F9", "#F1F5F9", "#F97316", "#F97316", "#F1F5F9"],
+                              scale: [1, 1, 1, 1, 1, 1.1, 1, 1]
+                            } : {}}
+                            transition={animateIn ? { repeat: Infinity, duration: 8, times: [0, 0.15, 0.2, 0.35, 0.4, 0.5 + (colIndex*0.01), 0.9, 1] } : {}}
                           ></motion.div>
                         )
                       })}
@@ -441,69 +546,6 @@ export default function LedgerHomepage() {
                 </div>
               </div>
 
-            </div>
-
-            {/* Right side: Insights & Feedback */}
-            <div className="relative z-10">
-              
-              {/* Connector line graphic (hidden on mobile) */}
-              <div className="absolute left-[-2.5rem] top-1/2 -translate-y-1/2 w-10 hidden md:flex items-center">
-                <motion.div 
-                  className="w-full border-t-2 border-dashed border-orange-200"
-                  animate={{ opacity: [0.3, 0.3, 1, 1, 0.3] }}
-                  transition={{ repeat: Infinity, duration: 6, times: [0, 0.5, 0.6, 0.9, 1] }}
-                ></motion.div>
-                <motion.div 
-                  className="w-2 h-2 rounded-full bg-orange-400 absolute right-0 -mt-1 shadow-[0_0_8px_rgba(251,146,60,0.8)]"
-                  animate={{ scale: [1, 1, 1.5, 1, 1], opacity: [0.5, 0.5, 1, 1, 0.5] }}
-                  transition={{ repeat: Infinity, duration: 6, times: [0, 0.5, 0.6, 0.9, 1] }}
-                ></motion.div>
-              </div>
-
-              {/* Insights Hypothesis Card */}
-              <motion.div 
-                className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 shadow-xl shadow-slate-900/20 text-white relative overflow-hidden h-full flex flex-col justify-center"
-                initial={{ x: 20, opacity: 0.5 }}
-                animate={{ x: [20, 20, 0, 0, 20], opacity: [0.5, 0.5, 1, 1, 0.5], boxShadow: ["0 0 0 rgba(251,146,60,0)", "0 0 0 rgba(251,146,60,0)", "0 0 30px rgba(251,146,60,0.2)", "0 0 30px rgba(251,146,60,0.2)", "0 0 0 rgba(251,146,60,0)"] }}
-                transition={{ repeat: Infinity, duration: 6, ease: "easeOut", times: [0, 0.5, 0.6, 0.9, 1] }}
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-2xl"></div>
-                
-                <div className="flex items-center gap-2 mb-6">
-                  <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
-                  <span className="font-mono text-[10px] font-bold text-orange-300 tracking-widest uppercase">System Insights</span>
-                </div>
-
-                <div className="space-y-4">
-                  <motion.div 
-                    className="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-md"
-                    animate={{ y: [10, 10, 0, 0, 10], opacity: [0, 0, 1, 1, 0] }}
-                    transition={{ repeat: Infinity, duration: 6, times: [0, 0.5, 0.65, 0.9, 1] }}
-                  >
-                    <div className="font-mono text-[10px] text-red-400 mb-1">ANOMALY DETECTED</div>
-                    <div className="text-sm font-medium">Variance +14% above baseline on primary execution driver.</div>
-                  </motion.div>
-
-                  <motion.div 
-                    className="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-md relative"
-                    animate={{ y: [10, 10, 0, 0, 10], opacity: [0, 0, 1, 1, 0] }}
-                    transition={{ repeat: Infinity, duration: 6, times: [0, 0.6, 0.75, 0.9, 1] }}
-                  >
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500 rounded-l-xl"></div>
-                    <div className="font-mono text-[10px] text-orange-400 mb-1">RECOMMENDATION</div>
-                    <div className="text-sm font-medium text-slate-200">Adjust frequency of V02 input to daily. Estimated impact: 2.1x velocity.</div>
-                  </motion.div>
-                </div>
-
-                <motion.div 
-                  className="mt-6 pt-4 border-t border-white/10 flex justify-end gap-3"
-                  animate={{ opacity: [0, 0, 1, 1, 0] }}
-                  transition={{ repeat: Infinity, duration: 6, times: [0, 0.7, 0.8, 0.9, 1] }}
-                >
-                  <button className="text-xs font-bold text-slate-400 hover:text-white transition-colors px-3 py-1.5">Dismiss</button>
-                  <button className="bg-white text-slate-900 text-xs font-bold px-4 py-1.5 rounded-lg hover:bg-orange-50 transition-colors shadow-sm">Apply V03</button>
-                </motion.div>
-              </motion.div>
             </div>
             
           </div>
