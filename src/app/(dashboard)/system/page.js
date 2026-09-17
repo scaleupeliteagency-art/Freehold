@@ -9,6 +9,27 @@ export default function SystemOverviewPage() {
   const [system, setSystem] = useState(null);
   const [northStar, setNorthStar] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [isRescheduling, setIsRescheduling] = useState(false);
+
+  const handleReschedule = async () => {
+    if (!rescheduleDate) return;
+    setIsRescheduling(true);
+    try {
+      const { error } = await supabase
+        .from("systems")
+        .update({ start_date: rescheduleDate })
+        .eq("id", system.id);
+      
+      if (error) throw error;
+      
+      setSystem({ ...system, start_date: rescheduleDate });
+    } catch (err) {
+      console.error("Error rescheduling:", err);
+    } finally {
+      setIsRescheduling(false);
+    }
+  };
 
   useEffect(() => {
     async function fetchSystem() {
@@ -18,23 +39,25 @@ export default function SystemOverviewPage() {
         // If not logged in, we might just have no user data, but let's query systems anyway
         // RLS will handle the filtering if they are logged in.
         
-        // Fetch the active system
+        // Fetch the active or scheduled system
         const { data: systems, error } = await supabase
           .from("systems")
           .select("*")
-          .eq("status", "active")
-          .limit(1);
+          .in("status", ["active", "scheduled"])
+          .order("created_at", { ascending: false });
 
         if (error) throw error;
 
         if (systems && systems.length > 0) {
-          setSystem(systems[0]);
+          const activeSys = systems.find(s => s.status === "active");
+          const targetSystem = activeSys || systems[0];
+          setSystem(targetSystem);
           
           // Fetch its north star goals
           const { data: goals } = await supabase
             .from("north_star_goals")
             .select("*")
-            .eq("system_id", systems[0].id)
+            .eq("system_id", targetSystem.id)
             .limit(1);
             
           if (goals && goals.length > 0) {
@@ -103,6 +126,35 @@ export default function SystemOverviewPage() {
         </div>
       </div>
 
+      {system.status === "scheduled" && (
+        <div className="bg-orange-50 rounded-xl shadow-sm border border-orange-200 p-6 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-orange-900 flex items-center gap-2 mb-1">
+              <Calendar className="w-5 h-5 text-orange-600" />
+              System is Scheduled
+            </h3>
+            <p className="text-orange-700">
+              This system is scheduled to start on {system.start_date ? new Date(system.start_date).toLocaleDateString() : "a future date"}.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <input 
+              type="date" 
+              value={rescheduleDate}
+              onChange={(e) => setRescheduleDate(e.target.value)}
+              className="px-3 py-2 border border-orange-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+            />
+            <button 
+              onClick={handleReschedule}
+              disabled={!rescheduleDate || isRescheduling}
+              className="px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+            >
+              {isRescheduling ? "Updating..." : "Reschedule"}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -112,8 +164,8 @@ export default function SystemOverviewPage() {
             <div>
               <h2 className="text-xl font-semibold text-gray-900">{system.name}</h2>
               <div className="flex items-center gap-3 mt-1">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Active
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${system.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                  {system.status.charAt(0).toUpperCase() + system.status.slice(1)}
                 </span>
                 <span className="text-sm text-gray-500">Phase: {system.current_phase || 'Execution'}</span>
               </div>
