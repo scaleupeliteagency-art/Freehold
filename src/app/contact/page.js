@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowLeft, Mail, Twitter } from "lucide-react";
+import { ArrowLeft, Mail, MessageSquare } from "lucide-react";
 
 export default function ContactPage() {
   return (
@@ -28,7 +28,7 @@ export default function ContactPage() {
 
           <a href="#" className="bg-gray-50 border border-gray-200 p-8 rounded-xl hover:border-orange-200 hover:shadow-lg transition-all group block">
             <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-gray-900 shadow-sm mb-6 group-hover:text-orange-600 transition-colors">
-              <Twitter className="w-6 h-6" />
+              <MessageSquare className="w-6 h-6" />
             </div>
             <h3 className="text-xl font-bold mb-2 text-gray-900">Twitter / X</h3>
             <p className="text-gray-500 font-medium">@workingledger</p>
