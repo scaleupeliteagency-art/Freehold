@@ -181,7 +181,7 @@ export default function SystemOverviewPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
         <h3 className="text-sm font-semibold text-gray-900 mb-3">The Why</h3>
         <p className="text-lg text-gray-700 italic border-l-4 border-orange-200 pl-4 py-1">
-          "{system.why || 'No reason specified'}"
+          "{system.why || system.description || 'No reason specified'}"
         </p>
       </div>
 

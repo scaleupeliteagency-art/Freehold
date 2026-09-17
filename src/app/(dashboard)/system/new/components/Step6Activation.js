@@ -44,6 +44,7 @@ export default function Step6Activation() {
       const { data: sysData, error: sysErr } = await supabase.from("systems").insert({
         user_id: userId,
         name: systemIdentity.name,
+        why: systemIdentity.why,
         description: systemIdentity.why,
         status: initialStatus,
         start_date: new Date(startDate).toISOString(),
