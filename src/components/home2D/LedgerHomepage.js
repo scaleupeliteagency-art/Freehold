@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
+import { motion } from "framer-motion";
 
 export default function LedgerHomepage() {
   const [user, setUser] = useState(null);
@@ -346,10 +347,26 @@ export default function LedgerHomepage() {
         <div className="max-w-[1000px] mx-auto relative">
           <div className="absolute inset-0 bg-gradient-to-br from-orange-200/20 to-orange-50/20 rounded-[3rem] blur-3xl pointer-events-none"></div>
           
-          <div className="bg-white/80 backdrop-blur-2xl border border-white shadow-2xl shadow-orange-900/10 rounded-[2.5rem] p-10 md:p-14 relative grid grid-cols-1 md:grid-cols-2 gap-10">
+          <div className="bg-white/80 backdrop-blur-2xl border border-white shadow-2xl shadow-orange-900/10 rounded-[2.5rem] p-10 md:p-14 relative grid grid-cols-1 md:grid-cols-2 gap-10 overflow-hidden">
+            
+            {/* Fake Mouse Cursor */}
+            <motion.div
+              className="absolute z-50 pointer-events-none drop-shadow-md"
+              initial={{ x: 50, y: 300, opacity: 0 }}
+              animate={{ 
+                x: [50, 310, 310, 150, 150], 
+                y: [300, 175, 175, 100, 300],
+                opacity: [0, 1, 1, 1, 0] 
+              }}
+              transition={{ repeat: Infinity, duration: 6, ease: "easeInOut", times: [0, 0.2, 0.3, 0.8, 1] }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4.33202 2.0526C3.99283 1.76191 3.5 2.00346 3.5 2.45037V21.5496C3.5 21.9965 3.99283 22.2381 4.33202 21.9474L10.5843 16.5878H18.7368C19.1979 16.5878 19.4293 16.0305 19.1037 15.7049L4.33202 2.0526Z" fill="#1E293B" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </motion.div>
             
             {/* Left side: System Overview & Activity */}
-            <div className="space-y-8 flex flex-col justify-center">
+            <div className="space-y-8 flex flex-col justify-center relative z-10">
               
               {/* Mini System Overview Card */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm shadow-slate-200/50">
@@ -364,14 +381,23 @@ export default function LedgerHomepage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs font-bold text-slate-700 block">35%</span>
+                    <motion.span 
+                      className="text-xs font-bold text-slate-700 block"
+                    >
+                      35%
+                    </motion.span>
                     <span className="text-[10px] text-slate-400">Completed</span>
                   </div>
                 </div>
                 
                 {/* Progress bar */}
                 <div className="w-full bg-slate-100 h-1.5 rounded-full mb-4 overflow-hidden">
-                  <div className="bg-gradient-to-r from-orange-400 to-orange-500 h-full rounded-full" style={{ width: '35%' }}></div>
+                  <motion.div 
+                    className="bg-gradient-to-r from-orange-400 to-orange-500 h-full rounded-full" 
+                    initial={{ width: '0%' }}
+                    animate={{ width: ['0%', '0%', '35%', '35%', '0%'] }}
+                    transition={{ repeat: Infinity, duration: 6, ease: "easeInOut", times: [0, 0.2, 0.4, 0.9, 1] }}
+                  ></motion.div>
                 </div>
 
                 <div className="bg-slate-50 p-3 rounded-xl flex items-center justify-between">
@@ -379,7 +405,13 @@ export default function LedgerHomepage() {
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-0.5">Next Action</span>
                     <span className="text-xs font-bold text-slate-700">Execute Input V02</span>
                   </div>
-                  <button className="bg-white border border-slate-200 shadow-sm text-slate-700 text-xs font-bold px-3 py-1.5 rounded-lg hover:border-orange-200 hover:text-orange-600 transition-colors">Start</button>
+                  <motion.button 
+                    className="bg-white border border-slate-200 shadow-sm text-slate-700 text-xs font-bold px-3 py-1.5 rounded-lg hover:border-orange-200 hover:text-orange-600 transition-colors"
+                    animate={{ scale: [1, 1, 0.9, 1, 1] }}
+                    transition={{ repeat: Infinity, duration: 6, times: [0, 0.23, 0.25, 0.27, 1] }}
+                  >
+                    Start
+                  </motion.button>
                 </div>
               </div>
 
@@ -393,15 +425,16 @@ export default function LedgerHomepage() {
                   {[...Array(4)].map((_, rowIndex) => (
                     <div key={rowIndex} className="flex gap-1.5">
                       {[...Array(14)].map((_, colIndex) => {
-                        const isFilled = Math.random() > 0.4;
-                        const intensity = Math.random();
-                        let bgClass = "bg-slate-100";
-                        if (isFilled) {
-                          if (intensity > 0.7) bgClass = "bg-orange-500";
-                          else if (intensity > 0.4) bgClass = "bg-orange-400";
-                          else bgClass = "bg-orange-200";
-                        }
-                        return <div key={colIndex} className={`w-3.5 h-3.5 rounded-[3px] ${bgClass}`}></div>
+                        const baseFilled = Math.random() > 0.6;
+                        const animateMe = !baseFilled && Math.random() > 0.7;
+                        return (
+                          <motion.div 
+                            key={colIndex} 
+                            className={`w-3.5 h-3.5 rounded-[3px] ${baseFilled ? 'bg-orange-200' : 'bg-slate-100'}`}
+                            animate={animateMe ? { backgroundColor: ["#F1F5F9", "#F1F5F9", "#F97316", "#FB923C", "#F1F5F9"] } : {}}
+                            transition={animateMe ? { repeat: Infinity, duration: 6, times: [0, 0.4 + Math.random()*0.1, 0.45 + Math.random()*0.1, 0.9, 1] } : {}}
+                          ></motion.div>
+                        )
                       })}
                     </div>
                   ))}
@@ -411,16 +444,29 @@ export default function LedgerHomepage() {
             </div>
 
             {/* Right side: Insights & Feedback */}
-            <div className="relative">
+            <div className="relative z-10">
               
               {/* Connector line graphic (hidden on mobile) */}
               <div className="absolute left-[-2.5rem] top-1/2 -translate-y-1/2 w-10 hidden md:flex items-center">
-                <div className="w-full border-t-2 border-dashed border-orange-200"></div>
-                <div className="w-2 h-2 rounded-full bg-orange-400 absolute right-0 -mt-1 shadow-[0_0_8px_rgba(251,146,60,0.8)]"></div>
+                <motion.div 
+                  className="w-full border-t-2 border-dashed border-orange-200"
+                  animate={{ opacity: [0.3, 0.3, 1, 1, 0.3] }}
+                  transition={{ repeat: Infinity, duration: 6, times: [0, 0.5, 0.6, 0.9, 1] }}
+                ></motion.div>
+                <motion.div 
+                  className="w-2 h-2 rounded-full bg-orange-400 absolute right-0 -mt-1 shadow-[0_0_8px_rgba(251,146,60,0.8)]"
+                  animate={{ scale: [1, 1, 1.5, 1, 1], opacity: [0.5, 0.5, 1, 1, 0.5] }}
+                  transition={{ repeat: Infinity, duration: 6, times: [0, 0.5, 0.6, 0.9, 1] }}
+                ></motion.div>
               </div>
 
               {/* Insights Hypothesis Card */}
-              <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 shadow-xl shadow-slate-900/20 text-white relative overflow-hidden h-full flex flex-col justify-center">
+              <motion.div 
+                className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 shadow-xl shadow-slate-900/20 text-white relative overflow-hidden h-full flex flex-col justify-center"
+                initial={{ x: 20, opacity: 0.5 }}
+                animate={{ x: [20, 20, 0, 0, 20], opacity: [0.5, 0.5, 1, 1, 0.5], boxShadow: ["0 0 0 rgba(251,146,60,0)", "0 0 0 rgba(251,146,60,0)", "0 0 30px rgba(251,146,60,0.2)", "0 0 30px rgba(251,146,60,0.2)", "0 0 0 rgba(251,146,60,0)"] }}
+                transition={{ repeat: Infinity, duration: 6, ease: "easeOut", times: [0, 0.5, 0.6, 0.9, 1] }}
+              >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-2xl"></div>
                 
                 <div className="flex items-center gap-2 mb-6">
@@ -429,23 +475,35 @@ export default function LedgerHomepage() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-md">
+                  <motion.div 
+                    className="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-md"
+                    animate={{ y: [10, 10, 0, 0, 10], opacity: [0, 0, 1, 1, 0] }}
+                    transition={{ repeat: Infinity, duration: 6, times: [0, 0.5, 0.65, 0.9, 1] }}
+                  >
                     <div className="font-mono text-[10px] text-red-400 mb-1">ANOMALY DETECTED</div>
                     <div className="text-sm font-medium">Variance +14% above baseline on primary execution driver.</div>
-                  </div>
+                  </motion.div>
 
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-md relative">
+                  <motion.div 
+                    className="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-md relative"
+                    animate={{ y: [10, 10, 0, 0, 10], opacity: [0, 0, 1, 1, 0] }}
+                    transition={{ repeat: Infinity, duration: 6, times: [0, 0.6, 0.75, 0.9, 1] }}
+                  >
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500 rounded-l-xl"></div>
                     <div className="font-mono text-[10px] text-orange-400 mb-1">RECOMMENDATION</div>
                     <div className="text-sm font-medium text-slate-200">Adjust frequency of V02 input to daily. Estimated impact: 2.1x velocity.</div>
-                  </div>
+                  </motion.div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-white/10 flex justify-end gap-3">
+                <motion.div 
+                  className="mt-6 pt-4 border-t border-white/10 flex justify-end gap-3"
+                  animate={{ opacity: [0, 0, 1, 1, 0] }}
+                  transition={{ repeat: Infinity, duration: 6, times: [0, 0.7, 0.8, 0.9, 1] }}
+                >
                   <button className="text-xs font-bold text-slate-400 hover:text-white transition-colors px-3 py-1.5">Dismiss</button>
                   <button className="bg-white text-slate-900 text-xs font-bold px-4 py-1.5 rounded-lg hover:bg-orange-50 transition-colors shadow-sm">Apply V03</button>
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
             </div>
             
           </div>
