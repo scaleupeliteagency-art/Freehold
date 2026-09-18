@@ -235,9 +235,9 @@ export default function DailyInputsPage() {
   if (!system) {
     return (
       <div className="w-full py-12 animate-in fade-in duration-500">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">No Active System</h2>
-        <hr className="border-gray-200 mb-8" />
-        <p className="text-gray-600 max-w-md">You need an active system to track daily inputs.</p>
+        <h2 className="text-2xl font-semibold text-slate-900 mb-4">No Active System</h2>
+        <hr className="border-slate-200 mb-8" />
+        <p className="text-slate-600 max-w-md">You need an active system to track daily inputs.</p>
       </div>
     );
   }
@@ -247,8 +247,8 @@ export default function DailyInputsPage() {
       <div className="w-full py-12 animate-in fade-in duration-500">
         <div className="mb-10 bg-orange-50 border border-orange-100 rounded-2xl p-8">
           <div className="text-xs font-semibold uppercase tracking-wider text-orange-600 mb-2">System Scheduled</div>
-          <h2 className="text-2xl font-semibold mb-2 text-gray-900">Awaiting Start Date</h2>
-          <p className="text-sm text-gray-600 max-w-xl leading-relaxed mb-6">
+          <h2 className="text-2xl font-semibold mb-2 text-slate-900">Awaiting Start Date</h2>
+          <p className="text-sm text-slate-600 max-w-xl leading-relaxed mb-6">
             Your system is scheduled to start on <strong>{new Date(system.start_date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</strong>. Daily inputs will be unlocked on that day.
           </p>
           <SystemContext context={context} />
@@ -262,12 +262,12 @@ export default function DailyInputsPage() {
       {/* Header */}
       <div className="mb-10 flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2">Daily Inputs</h1>
-          <p className="text-sm font-medium text-gray-500">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
-          <p className="text-sm text-gray-500 mt-2">The actions you repeatedly perform to move your system forward.</p>
+          <h1 className="text-3xl font-semibold text-slate-900 mb-2">Daily Inputs</h1>
+          <p className="text-sm font-medium text-slate-500">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
+          <p className="text-sm text-slate-500 mt-2">The actions you repeatedly perform to move your system forward.</p>
         </div>
         <div className="flex gap-4">
-          <button onClick={() => { setEditingInput(null); setIsManageOpen(true); }} className="flex items-center gap-2 bg-orange-500 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-orange-600 transition-colors shadow-sm">
+          <button onClick={() => { setEditingInput(null); setIsManageOpen(true); }} className="flex items-center gap-2 bg-orange-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors shadow-sm">
             <Plus className="w-4 h-4" /> Add Input
           </button>
         </div>
@@ -287,8 +287,8 @@ export default function DailyInputsPage() {
         onEdit={(inp) => { setEditingInput(inp); setIsManageOpen(true); }}
       />
 
-      <div className="mt-16 text-center border-t border-gray-200 pt-10">
-        <button onClick={() => setIsCloseDayOpen(true)} className="bg-gray-900 text-white px-12 py-4 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors shadow-sm">
+      <div className="mt-16 text-center border-t border-slate-200 pt-10">
+        <button onClick={() => setIsCloseDayOpen(true)} className="bg-orange-600 text-white px-12 py-4 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors shadow-sm">
           Close Day
         </button>
       </div>
