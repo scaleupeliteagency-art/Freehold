@@ -54,7 +54,7 @@ export default function InputCard({ input, onUpdate, onEdit, onViewHistory }) {
               value={value === 0 && input.type !== "percentage" ? "" : value} 
               onChange={(e) => handleUpdate(Number(e.target.value))}
               placeholder="0"
-              className="flex-1 h-10 bg-transparent text-center font-semibold text-xl focus:outline-none text-slate-900 placeholder:text-slate-300"
+              className="flex-1 min-w-0 h-10 bg-transparent text-center font-semibold text-xl focus:outline-none text-slate-900 placeholder:text-slate-300"
             />
             <button onClick={() => handleUpdate(value + 1)} className="w-10 h-10 flex items-center justify-center text-white bg-orange-600 hover:bg-orange-700 rounded-full shadow-sm transition-colors shrink-0">
               <Plus className="w-4 h-4" />
