@@ -355,18 +355,22 @@ export function LedgerSidebar({ children }) {
         </main>
       </div>
 
-      {/* MOBILE BOTTOM NAV */}
-      <div className="fixed bottom-0 inset-x-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 z-50 md:hidden flex justify-around items-center pb-safe pt-2 px-2">
-        {mainNav.map((item) => {
-          const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+      {/* MOBILE BOTTOM NAV (ULTRA ADVANCED FLOATING DOCK) */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-max bg-white/75 backdrop-blur-3xl border border-white/60 shadow-[0_8px_32px_rgba(15,23,42,0.12),_0_0_0_1px_rgba(255,255,255,0.6)_inset] rounded-full z-50 md:hidden flex justify-center items-center p-1.5 gap-1.5">
+        {mainNav.filter(n => n.label !== "System").map((item) => {
+          const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(`${item.href}/`));
           return (
             <Link 
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center p-1 w-full ${isActive ? 'text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`relative flex items-center justify-center rounded-full transition-all duration-300 overflow-hidden ${isActive ? 'bg-gradient-to-br from-orange-500 to-orange-400 shadow-[0_2px_10px_rgba(234,88,12,0.3)] px-4 py-2.5' : 'px-3 py-2.5 hover:bg-black/5'}`}
             >
-              <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} className="mb-1" />
-              <span className="text-[10px] font-medium text-center">{item.label}</span>
+              <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} className={`relative z-10 transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+              {isActive && (
+                <span className="relative z-10 ml-2 text-xs font-semibold text-white tracking-wide animate-in fade-in slide-in-from-left-2 duration-300">
+                  {item.label}
+                </span>
+              )}
             </Link>
           );
         })}
