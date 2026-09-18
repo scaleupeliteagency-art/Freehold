@@ -155,7 +155,7 @@ export function LedgerSidebar({ children }) {
       {/* SIDEBAR */}
       <div 
         ref={sidebarRef}
-        className="fixed inset-y-0 left-0 bg-sidebar z-40 flex flex-col transition-[width] duration-300 ease-in-out border-r border-divider/50 shadow-sm"
+        className="hidden md:flex fixed inset-y-0 left-0 bg-sidebar z-40 flex-col transition-[width] duration-300 ease-in-out border-r border-divider/50 shadow-sm"
         style={{ width: isCollapsed ? 64 : width }}
       >
         <div 
@@ -342,17 +342,34 @@ export function LedgerSidebar({ children }) {
 
       {/* MAIN CONTENT AREA */}
       <div 
-        className="flex flex-col flex-1 w-full transition-[padding] duration-300 ease-in-out"
-        style={{ paddingLeft: isCollapsed ? 64 : width }}
+        className="flex flex-col flex-1 w-full transition-[padding] duration-300 ease-in-out pl-0 md:pl-[var(--sidebar-width)]"
+        style={{ "--sidebar-width": `${isCollapsed ? 64 : width}px` }}
       >
         <div className="lg:hidden border-b border-divider/50 p-4 flex justify-between items-center bg-background sticky top-0 z-50">
           <h2 className="font-semibold text-lg tracking-tight">Working Ledger</h2>
           <button className="p-2 rounded-lg bg-white border border-divider shadow-sm text-sm font-medium">Menu</button>
         </div>
         
-        <main className="flex-1 w-full p-4 md:p-6 lg:p-8">
+        <main className="flex-1 w-full p-4 md:p-6 lg:p-8 pb-24 md:pb-8">
           {children}
         </main>
+      </div>
+
+      {/* MOBILE BOTTOM NAV */}
+      <div className="fixed bottom-0 inset-x-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 z-50 md:hidden flex justify-around items-center pb-safe pt-2 px-2">
+        {mainNav.map((item) => {
+          const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+          return (
+            <Link 
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center justify-center p-1 w-full ${isActive ? 'text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} className="mb-1" />
+              <span className="text-[10px] font-medium text-center">{item.label}</span>
+            </Link>
+          );
+        })}
       </div>
 
       {/* COMMAND PALETTE */}
