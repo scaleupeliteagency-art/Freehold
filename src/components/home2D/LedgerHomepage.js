@@ -95,7 +95,7 @@ export default function LedgerHomepage() {
               The Goal Operating System
             </div>
             
-            <h1 className="text-5xl md:text-[76px] font-black text-slate-900 tracking-tighter leading-[1.05] mb-6">
+            <h1 className="text-4xl sm:text-5xl md:text-[76px] font-black text-slate-900 tracking-tighter leading-[1.05] mb-6">
               Stop rebuilding your plan.<br />
               <span className="text-transparent bg-clip-text bg-gradient-to-br from-orange-600 to-orange-400 drop-shadow-sm">Start evolving your system.</span>
             </h1>
@@ -120,8 +120,8 @@ export default function LedgerHomepage() {
           </div>
 
           {/* Floating UI Graphic (Glassmorphism) */}
-          <div className="md:col-span-5 relative hidden md:block">
-            <div className="bg-white/70 backdrop-blur-xl border border-white shadow-xl shadow-orange-900/5 p-8 rounded-3xl transform rotate-1 hover:rotate-0 transition-transform duration-700">
+          <div className="md:col-span-5 relative mt-12 md:mt-0 transform scale-95 sm:scale-100 origin-top">
+            <div className="bg-white/70 backdrop-blur-xl border border-white shadow-xl shadow-orange-900/5 p-6 md:p-8 rounded-3xl transform rotate-1 hover:rotate-0 transition-transform duration-700">
               <div className="flex items-center justify-between mb-8 pb-4 border-b border-orange-900/5">
                 <div className="font-mono text-[10px] font-bold text-slate-400 tracking-wider">SYSTEM_READOUT</div>
                 <div className="w-2.5 h-2.5 rounded-full bg-orange-400 shadow-[0_0_12px_rgba(251,146,60,0.6)] animate-pulse"></div>
@@ -347,7 +347,7 @@ export default function LedgerHomepage() {
         <div className="max-w-[1000px] mx-auto relative">
           <div className="absolute inset-0 bg-gradient-to-br from-orange-200/20 to-orange-50/20 rounded-[3rem] blur-3xl pointer-events-none"></div>
           
-          <div className="bg-white/80 backdrop-blur-2xl border border-white shadow-2xl shadow-orange-900/10 rounded-[2.5rem] p-10 md:p-14 relative grid grid-cols-1 md:grid-cols-2 gap-12 overflow-hidden">
+          <div className="bg-white/80 backdrop-blur-2xl border border-white shadow-2xl shadow-orange-900/10 rounded-[2.5rem] p-6 sm:p-10 md:p-14 relative flex flex-col md:grid md:grid-cols-2 gap-6 md:gap-12 overflow-hidden">
             
             {/* Fake Mouse Cursor */}
             <motion.div
@@ -676,7 +676,7 @@ export default function LedgerHomepage() {
       </Section>
 
       {/* FOOTER */}
-      <footer className="bg-slate-50 border-t border-slate-200/60 py-12 px-6">
+      <footer className="bg-slate-50 border-t border-slate-200/60 py-12 px-6 pb-28 md:pb-12">
         <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center gap-3 mb-6 md:mb-0">
             <img src="/assets/logo.png" alt="Working Ledger Logo" className="h-6 w-auto grayscale opacity-40 hover:opacity-100 transition-opacity duration-300" />
@@ -689,6 +689,21 @@ export default function LedgerHomepage() {
           </div>
         </div>
       </footer>
+
+      {/* MOBILE STICKY BOTTOM BAR */}
+      <div className="fixed bottom-0 left-0 w-full z-50 md:hidden pb-safe backdrop-blur-xl bg-white/80 border-t border-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+        <div className="px-6 py-4 flex items-center justify-between gap-4">
+          <div className="flex flex-col">
+            <span className="text-sm font-black text-slate-900 leading-tight">$5/mo</span>
+            <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Goal Engine</span>
+          </div>
+          <Link href="/signup" className="flex-1 relative group overflow-hidden px-5 py-3.5 bg-gradient-to-b from-orange-400 to-orange-500 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.4),_0_4px_14px_rgba(234,88,12,0.25)] text-sm font-bold rounded-full transition-all active:scale-95 flex items-center justify-center gap-2">
+            <div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent pointer-events-none rounded-t-full"></div>
+            <span className="drop-shadow-sm">Init System</span>
+            <span className="font-mono transition-transform duration-300 group-hover:translate-x-1">→</span>
+          </Link>
+        </div>
+      </div>
 
     </div>
   );
