@@ -34,17 +34,13 @@ export default function ReviewSummary({ reviewState, onBack }) {
 
           if (change.action === 'ARCHIVE' || change.action === 'PAUSE' || change.action === 'REPLACE') {
             await supabase.from("input_definitions").update({
-              active_status: false,
-              status: change.action.toLowerCase(),
-              end_date: new Date().toISOString()
+              active_status: false
             }).eq("id", change.id);
           }
 
           if (change.action === 'INCREASE' || change.action === 'REDUCE') {
             await supabase.from("input_definitions").update({
-              active_status: false,
-              status: 'archived',
-              end_date: new Date().toISOString()
+              active_status: false
             }).eq("id", change.id);
 
             await supabase.from("input_definitions").insert({
@@ -54,10 +50,7 @@ export default function ReviewSummary({ reviewState, onBack }) {
               target: change.newTarget,
               frequency: oldInput.frequency,
               unit: oldInput.unit,
-              active_status: true,
-              version_group_id: oldInput.version_group_id || oldInput.id,
-              previous_version_id: oldInput.id,
-              change_reason: `Milestone achieved. Action: ${change.action}`
+              active_status: true
             });
           }
         }

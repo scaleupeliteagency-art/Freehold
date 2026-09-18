@@ -43,7 +43,7 @@ export default function ReviewFlow() {
       const activeMilestone = milestones?.[0] || null;
 
       // Fetch active inputs
-      const { data: inputs } = await supabase.from("input_definitions").select("*").eq("system_id", system.id).eq("status", "active");
+      const { data: inputs } = await supabase.from("input_definitions").select("*").eq("system_id", system.id).eq("active_status", true);
 
       setReviewState(prev => ({ ...prev, system, milestone: activeMilestone, inputs: inputs || [] }));
       setLoading(false);

@@ -98,7 +98,7 @@ export default function DailyInputsPage() {
         .from("input_definitions")
         .select("*")
         .eq("system_id", activeSystem.id)
-        .eq("status", "active");
+        .eq("active_status", true);
 
       if (inputDefsError) {
         console.error(inputDefsError);
@@ -169,26 +169,20 @@ export default function DailyInputsPage() {
     try {
       if (editingInput) {
         if (isStateChange) {
-           const { error } = await supabase.from("input_definitions").update({ status: formData.status, end_date: formData.status === "archived" ? new Date().toISOString() : null }).eq("id", editingInput.id);
+           const { error } = await supabase.from("input_definitions").update({ active_status: formData.status === "active" }).eq("id", editingInput.id);
            if (error) { alert("Error: " + error.message); return; }
         } else {
-          const { error: err1 } = await supabase.from("input_definitions").update({ status: "archived", end_date: new Date().toISOString() }).eq("id", editingInput.id);
+          const { error: err1 } = await supabase.from("input_definitions").update({ active_status: false }).eq("id", editingInput.id);
           if (err1) { alert("Error: " + err1.message); return; }
           
           const { error: err2 } = await supabase.from("input_definitions").insert({
             system_id: system.id,
             name: formData.name,
-            description: formData.description,
-            type: formData.type,
             target: formData.target,
             unit: formData.unit,
             frequency: formData.frequency,
-            weight: formData.weight,
-            version_group_id: editingInput.version_group_id || editingInput.id,
-            previous_version_id: editingInput.id,
-            change_reason: formData.change_reason,
             weekly_milestone_id: editingInput.weekly_milestone_id,
-            status: "active"
+            active_status: true
           });
           if (err2) { alert("Error: " + err2.message); return; }
         }
@@ -196,14 +190,11 @@ export default function DailyInputsPage() {
         const { error } = await supabase.from("input_definitions").insert({
           system_id: system.id,
           name: formData.name,
-          description: formData.description,
-          type: formData.type,
           target: formData.target,
           unit: formData.unit,
           frequency: formData.frequency,
-          weight: formData.weight,
           weekly_milestone_id: context?.milestoneId || null,
-          status: "active"
+          active_status: true
         });
         if (error) { alert("Insert Error: " + error.message); return; }
       }
@@ -220,14 +211,8 @@ export default function DailyInputsPage() {
     setViewingHistoryInput(input);
     setIsHistoryOpen(true);
     
-    const groupId = input.version_group_id || input.id;
-    const { data } = await supabase.from("input_definitions")
-      .select("*")
-      .eq("version_group_id", groupId)
-      .neq("id", input.id)
-      .order("created_at", { ascending: false });
-      
-    setHistoryData(data || []);
+    // Fallback since version_group_id doesn't exist in the remote DB schema yet
+    setHistoryData([]);
   };
 
   const calculateScore = () => {
