@@ -17,22 +17,22 @@ export default function EvolutionView() {
         const systemId = systems[0].id;
         const allEvents = [];
 
-        allEvents.push({ id: `sys-${systemId}`, type: "system", date: systems[0].created_at, title: "SYSTEM CREATED", desc: "Initial operating structure", style: "border-ink bg-ink text-paper" });
+        allEvents.push({ id: `sys-${systemId}`, type: "system", date: systems[0].created_at, title: "SYSTEM CREATED", desc: "Initial operating structure", style: "bg-gradient-to-br from-orange-500 to-orange-600 border border-orange-400 text-white shadow-md shadow-orange-500/20" });
 
         const { data: versions } = await supabase.from("system_versions").select("*").eq("system_id", systemId);
-        if (versions) versions.forEach(v => allEvents.push({ id: `v-${v.id}`, type: "system_version", date: v.created_at, title: `SYSTEM ${v.version_number}`, desc: "New system configuration activated", style: "border-ink bg-ink text-paper" }));
+        if (versions) versions.forEach(v => allEvents.push({ id: `v-${v.id}`, type: "system_version", date: v.created_at, title: `SYSTEM ${v.version_number}`, desc: "New system configuration activated", style: "bg-gradient-to-br from-orange-500 to-orange-600 border border-orange-400 text-white shadow-md shadow-orange-500/20" }));
 
         const { data: reviews } = await supabase.from("reviews").select("*").eq("system_id", systemId).eq("status", "COMPLETED");
-        if (reviews) reviews.forEach(r => allEvents.push({ id: `rev-${r.id}`, type: "review", date: r.completed_at || r.created_at, title: `${r.type} REVIEW`, desc: "Diagnostic analysis completed", style: "border-ochre bg-white text-ochre" }));
+        if (reviews) reviews.forEach(r => allEvents.push({ id: `rev-${r.id}`, type: "review", date: r.completed_at || r.created_at, title: `${r.type} REVIEW`, desc: "Diagnostic analysis completed", style: "bg-orange-50 border border-orange-200 text-orange-900" }));
 
         const { data: insights } = await supabase.from("insights").select("*").eq("system_id", systemId);
         if (insights) insights.forEach(i => {
-          if (i.status === 'VALIDATED') allEvents.push({ id: `ins-${i.id}`, type: "validated", date: i.created_at, title: "VALIDATED INSIGHT", desc: i.title, style: "border-moss/30 bg-white text-moss" });
-          else allEvents.push({ id: `ins-${i.id}`, type: "insight", date: i.created_at, title: `NEW ${i.type}`, desc: i.title, style: "border-divider bg-white text-ink/70" });
+          if (i.status === 'VALIDATED') allEvents.push({ id: `ins-${i.id}`, type: "validated", date: i.created_at, title: "VALIDATED INSIGHT", desc: i.title, style: "bg-white border border-slate-200 text-slate-800" });
+          else allEvents.push({ id: `ins-${i.id}`, type: "insight", date: i.created_at, title: `NEW ${i.type}`, desc: i.title, style: "bg-white border border-slate-200 text-slate-800" });
         });
 
         const { data: experiments } = await supabase.from("experiments").select("*").eq("system_id", systemId);
-        if (experiments) experiments.forEach(e => allEvents.push({ id: `exp-${e.id}`, type: "experiment", date: e.created_at, title: "EXPERIMENT", desc: e.hypothesis, style: "border-divider bg-white text-ink/50" }));
+        if (experiments) experiments.forEach(e => allEvents.push({ id: `exp-${e.id}`, type: "experiment", date: e.created_at, title: "EXPERIMENT", desc: e.hypothesis, style: "bg-slate-50 border border-slate-100 text-slate-600" }));
 
         allEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
         setNodes(allEvents);
@@ -44,7 +44,7 @@ export default function EvolutionView() {
   if (loading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
-        <div className="text-sm font-semibold animate-pulse uppercase tracking-widest text-moss">Tracing Evolution...</div>
+        <div className="text-sm font-semibold animate-pulse uppercase tracking-widest text-orange-600">Tracing Evolution...</div>
       </div>
     );
   }
@@ -53,28 +53,28 @@ export default function EvolutionView() {
     <div className="w-full mx-auto animate-in fade-in duration-500">
       
       <div className="mb-16">
-        <Link href="/history" className="text-[10px] font-bold uppercase tracking-widest text-ink/50 hover:text-ink transition-colors mb-4 inline-block">
+        <Link href="/history" className="text-orange-600 hover:text-orange-700 font-medium text-sm flex items-center gap-1 mb-4 inline-block">
           ← Back to Ledger
         </Link>
-        <h1 className="text-3xl font-serif font-bold text-ink mb-2">System Evolution</h1>
-        <p className="text-ink/70 text-sm mb-6">The causal chain of the active system.</p>
-        <hr className="border-divider" />
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">System Evolution</h1>
+        <p className="text-slate-500 text-sm mb-6">The causal chain of the active system.</p>
+        <hr className="border-slate-200" />
       </div>
 
       <div className="relative flex flex-col pl-8">
         {nodes.length === 0 ? (
-           <div className="text-ink/50 italic text-sm">No evolution data available.</div>
+           <div className="text-slate-500 italic text-sm">No evolution data available.</div>
         ) : (
           <>
-            <div className="absolute top-0 bottom-0 left-[39px] w-px bg-divider -z-10" />
+            <div className="absolute top-0 bottom-0 left-[39px] w-px bg-orange-200 -z-10" />
 
             {nodes.map((node, idx) => (
               <div key={node.id} className="flex mb-12 group w-full max-w-sm">
                 
-                <div className={`w-full p-4 border ${node.style} bg-paper`}>
-                  <div className="text-[9px] font-bold uppercase tracking-widest opacity-80 mb-2">{node.title}</div>
-                  <div className="text-sm font-semibold leading-snug">{node.desc}</div>
-                  <div className="text-[9px] font-mono opacity-50 mt-4 pt-3 border-t border-current/20">
+                <div className={`w-full p-4 rounded-xl shadow-sm ${node.style}`}>
+                  <div className="text-xs font-bold uppercase tracking-wider text-inherit mb-1">{node.title}</div>
+                  <div className="text-sm font-medium">{node.desc}</div>
+                  <div className="text-[10px] font-mono text-inherit/60 mt-3 pt-3 border-t border-inherit/20">
                     {new Date(node.date).toLocaleDateString()}
                   </div>
                 </div>
@@ -83,8 +83,8 @@ export default function EvolutionView() {
             ))}
             
             <div className="flex items-center gap-4 mt-4">
-              <div className="w-2 h-2 bg-ink ml-[1px]" />
-              <div className="text-[10px] font-bold text-ink/50 uppercase tracking-widest">Current System State</div>
+              <div className="w-2 h-2 rounded-full bg-orange-500 ml-[1px]" />
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">Current System State</div>
             </div>
           </>
         )}
