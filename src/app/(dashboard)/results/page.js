@@ -85,7 +85,7 @@ function ResultsContent() {
             // Calculations
             let progress = null;
             let status = "NO DATA";
-            let statusColor = "text-ink/50";
+            let statusColor = "text-slate-400";
             let change = null;
             
             const currentActual = latest?.actual_value;
@@ -103,16 +103,16 @@ function ResultsContent() {
 
                 if (progress >= 100) {
                   status = "AHEAD";
-                  statusColor = "text-moss";
+                  statusColor = "text-emerald-600";
                 } else if (progress >= 80) {
                   status = "ON TRACK";
-                  statusColor = "text-ink";
+                  statusColor = "text-slate-900";
                 } else if (progress >= 50) {
                   status = "AT RISK";
-                  statusColor = "text-ochre";
+                  statusColor = "text-amber-500";
                 } else {
                   status = "OFF TRACK";
-                  statusColor = "text-red-700";
+                  statusColor = "text-red-600";
                 }
               }
             }
@@ -175,7 +175,7 @@ function ResultsContent() {
   if (loading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
-        <div className="text-sm font-bold animate-pulse uppercase tracking-widest text-ink/50">Loading Outcomes...</div>
+        <div className="text-sm font-semibold animate-pulse uppercase tracking-wider text-slate-400">Loading Outcomes...</div>
       </div>
     );
   }
@@ -183,9 +183,9 @@ function ResultsContent() {
   if (!activeSystem) {
     return (
       <div className="w-full py-12 animate-in fade-in duration-500">
-        <h2 className="text-2xl font-serif font-bold text-ink mb-4">No Active System</h2>
-        <hr className="border-divider mb-8" />
-        <p className="text-ink max-w-md">You need an active system to record results.</p>
+        <h2 className="text-3xl font-bold text-slate-900 mb-4">No Active System</h2>
+        <hr className="border-slate-200 mb-8" />
+        <p className="text-slate-500 max-w-md">You need an active system to record results.</p>
       </div>
     );
   }
@@ -194,14 +194,14 @@ function ResultsContent() {
     <div className="w-full animate-in fade-in duration-500">
       
       {handoff === 'true' && handoffMilestoneName && !handoffDefinitionId && (
-        <div className="bg-ochre/10 border-2 border-ochre/40 p-6 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-pulse">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl shadow-sm p-6 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-pulse">
           <div>
-            <div className="text-[10px] font-bold text-ochre uppercase tracking-widest mb-1">Milestone Achieved</div>
-            <h2 className="text-xl font-serif font-bold text-ink">You achieved: {handoffMilestoneName}. What was the exact measurable result generated?</h2>
-            <p className="text-sm text-ink/70 mt-1">There is no measurable result connected to this milestone. Please define one to continue the Ledger.</p>
+            <div className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">Milestone Achieved</div>
+            <h2 className="text-xl font-bold text-slate-900">You achieved: {handoffMilestoneName}. What was the exact measurable result generated?</h2>
+            <p className="text-sm text-slate-500 mt-1">There is no measurable result connected to this milestone. Please define one to continue the Ledger.</p>
           </div>
           <button 
-            className="bg-ochre text-paper text-sm font-bold uppercase tracking-widest py-2 px-6 shrink-0 hover:bg-ochre/80 transition-colors"
+            className="bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg px-4 py-2 shadow-sm transition-colors shrink-0"
           >
             Define Result
           </button>
@@ -211,14 +211,14 @@ function ResultsContent() {
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
         <div>
-          <h1 className="text-4xl font-serif font-bold text-ink mb-2">Results</h1>
-          <p className="text-sm text-ink/70">Record what actually happened. Keep the system grounded in reality.</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Results</h1>
+          <p className="text-sm text-slate-500">Record what actually happened. Keep the system grounded in reality.</p>
         </div>
         <div className="flex items-center gap-4">
           <select 
             value={filterPeriod}
             onChange={(e) => setFilterPeriod(e.target.value)}
-            className="bg-transparent border border-divider text-ink text-sm py-2 px-3 focus:outline-none focus:border-ink cursor-pointer"
+            className="bg-white border border-slate-200 rounded-lg shadow-sm text-slate-900 text-sm py-2 px-3 focus:outline-none focus:border-slate-300 cursor-pointer"
           >
             <option>This Week</option>
             <option>This Month</option>
@@ -226,81 +226,83 @@ function ResultsContent() {
           </select>
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="bg-ink text-paper text-sm font-bold uppercase tracking-widest py-2 px-5 hover:bg-ink/80 transition-colors"
+            className="bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg px-4 py-2 shadow-sm transition-colors"
           >
             + Record Result
           </button>
         </div>
       </div>
       
-      <hr className="border-divider mb-16" />
+      <hr className="border-slate-200 mb-10" />
 
       {/* CURRENT RESULTS */}
-      <section className="mb-16">
+      <section className="mb-12">
         <div className="mb-6">
-          <h2 className="text-xl font-serif font-bold text-ink mb-1">Current Results</h2>
-          <p className="text-sm text-ink/70">Where the system stands right now.</p>
+          <h2 className="text-xl font-bold text-slate-900 mb-1">Current Results</h2>
+          <p className="text-sm text-slate-500">Where the system stands right now.</p>
         </div>
 
         {results.length === 0 ? (
-          <div className="border border-divider bg-white p-12 text-center">
-            <h3 className="text-lg font-serif font-bold text-ink mb-2">No results recorded yet.</h3>
-            <p className="text-sm text-ink/70 mb-6 max-w-sm mx-auto">Define the outcomes that matter to your system, then record what actually happens.</p>
-            <button className="bg-ink text-paper text-[10px] font-bold uppercase tracking-widest py-2 px-6 hover:bg-ink/80 transition-colors">
+          <div className="border border-slate-200 rounded-xl shadow-sm bg-white p-12 text-center">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">No results recorded yet.</h3>
+            <p className="text-sm text-slate-500 mb-6 max-w-sm mx-auto">Define the outcomes that matter to your system, then record what actually happens.</p>
+            <button className="bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg px-4 py-2 shadow-sm transition-colors">
               Define a Result
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto border-t border-b border-divider">
-            <table className="w-full text-sm text-left whitespace-nowrap">
-              <thead>
-                <tr className="border-b border-divider/50">
-                  <th className="py-4 px-2 font-bold text-[10px] uppercase tracking-widest text-ink/50">Result</th>
-                  <th className="py-4 px-2 font-bold text-[10px] uppercase tracking-widest text-ink/50 text-right">Current</th>
-                  <th className="py-4 px-2 font-bold text-[10px] uppercase tracking-widest text-ink/50 text-right">Target</th>
-                  <th className="py-4 px-2 font-bold text-[10px] uppercase tracking-widest text-ink/50 text-right">Baseline</th>
-                  <th className="py-4 px-2 font-bold text-[10px] uppercase tracking-widest text-ink/50 text-right">Change</th>
-                  <th className="py-4 px-2 font-bold text-[10px] uppercase tracking-widest text-ink/50 text-right">Progress</th>
-                  <th className="py-4 px-2 font-bold text-[10px] uppercase tracking-widest text-ink/50">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((r) => (
-                  <tr key={r.id} className="border-b border-divider/50 hover:bg-white/40 transition-colors cursor-pointer group">
-                    <td className="py-4 px-2 font-bold text-ink group-hover:text-ochre transition-colors">{r.name}</td>
-                    <td className="py-4 px-2 font-mono text-ink text-right font-semibold">
-                      {r.currentActual !== undefined ? `${r.type === 'Currency' ? '$' : ''}${r.currentActual}${r.unit ? ' ' + r.unit : ''}` : '—'}
-                    </td>
-                    <td className="py-4 px-2 font-mono text-ink/70 text-right">
-                      {r.currentTarget !== undefined ? `${r.type === 'Currency' ? '$' : ''}${r.currentTarget}${r.unit ? ' ' + r.unit : ''}` : '—'}
-                    </td>
-                    <td className="py-4 px-2 font-mono text-ink/50 text-right">
-                      {r.currentBaseline !== undefined ? `${r.type === 'Currency' ? '$' : ''}${r.currentBaseline}${r.unit ? ' ' + r.unit : ''}` : '—'}
-                    </td>
-                    <td className="py-4 px-2 font-mono text-ink text-right">{r.change ? r.change : '—'}</td>
-                    <td className="py-4 px-2 font-mono text-ink text-right">{r.progress !== null ? `${r.progress}%` : '—'}</td>
-                    <td className={`py-4 px-2 text-[10px] font-bold uppercase tracking-widest ${r.statusColor}`}>{r.status}</td>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left whitespace-nowrap">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Result</th>
+                    <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Current</th>
+                    <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Target</th>
+                    <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Baseline</th>
+                    <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Change</th>
+                    <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Progress</th>
+                    <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {results.map((r) => (
+                    <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer group">
+                      <td className="py-4 px-4 font-medium text-slate-900 group-hover:text-orange-600 transition-colors">{r.name}</td>
+                      <td className="py-4 px-4 font-mono text-slate-900 text-right font-medium">
+                        {r.currentActual !== undefined ? `${r.type === 'Currency' ? '$' : ''}${r.currentActual}${r.unit ? ' ' + r.unit : ''}` : '—'}
+                      </td>
+                      <td className="py-4 px-4 font-mono text-slate-500 text-right">
+                        {r.currentTarget !== undefined ? `${r.type === 'Currency' ? '$' : ''}${r.currentTarget}${r.unit ? ' ' + r.unit : ''}` : '—'}
+                      </td>
+                      <td className="py-4 px-4 font-mono text-slate-400 text-right">
+                        {r.currentBaseline !== undefined ? `${r.type === 'Currency' ? '$' : ''}${r.currentBaseline}${r.unit ? ' ' + r.unit : ''}` : '—'}
+                      </td>
+                      <td className="py-4 px-4 font-mono text-slate-700 text-right">{r.change ? r.change : '—'}</td>
+                      <td className="py-4 px-4 font-mono text-slate-700 text-right">{r.progress !== null ? `${r.progress}%` : '—'}</td>
+                      <td className={`py-4 px-4 text-xs font-semibold uppercase tracking-wider ${r.statusColor}`}>{r.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </section>
 
       {/* RESULT TRENDS */}
       {results.length > 0 && (
-        <section className="mb-16">
-          <div className="flex justify-between items-end mb-6 border-b border-divider pb-4">
+        <section className="mb-12">
+          <div className="flex justify-between items-end mb-6 pb-2">
             <div>
-              <h2 className="text-xl font-serif font-bold text-ink mb-1">Result Trends</h2>
-              <select className="bg-transparent text-sm font-bold text-ink focus:outline-none cursor-pointer">
+              <h2 className="text-xl font-bold text-slate-900 mb-1">Result Trends</h2>
+              <select className="bg-transparent text-sm font-semibold text-slate-900 focus:outline-none cursor-pointer">
                 {results.map(r => <option key={r.id}>{r.name}</option>)}
               </select>
             </div>
             <div className="flex gap-2">
               {['7D', '30D', '90D', 'Quarter', 'Year', 'All'].map(t => (
-                <button key={t} className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 border border-divider hover:bg-ink hover:text-paper transition-colors">
+                <button key={t} className="text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-md px-3 py-1 hover:bg-slate-50 transition-colors shadow-sm">
                   {t}
                 </button>
               ))}
@@ -308,13 +310,13 @@ function ResultsContent() {
           </div>
           
           {/* Trend Chart Area */}
-          <div className="h-64 border border-divider bg-white flex items-center justify-center relative overflow-hidden p-6">
+          <div className="h-64 bg-white rounded-xl shadow-sm border border-slate-200 flex items-center justify-center relative overflow-hidden p-6">
              <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'linear-gradient(var(--color-divider) 1px, transparent 1px), linear-gradient(90deg, var(--color-divider) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
              
              {results[0].records.length < 2 ? (
                 <div className="relative z-10 text-center">
-                  <h3 className="text-lg font-serif font-bold text-ink mb-1">Not enough data yet.</h3>
-                  <p className="text-sm text-ink/70">Record at least 2 comparable periods to begin showing a trend.</p>
+                  <h3 className="text-lg font-bold text-slate-900 mb-1">Not enough data yet.</h3>
+                  <p className="text-sm text-slate-500">Record at least 2 comparable periods to begin showing a trend.</p>
                 </div>
              ) : (
                 <div className="relative z-10 w-full h-full flex items-end gap-4 justify-between">
@@ -322,9 +324,9 @@ function ResultsContent() {
                   {results[0].records.slice(0).reverse().map((rec, i) => {
                     const heightPercent = Math.min(100, Math.max(10, ((rec.actual_value || 0) / (rec.target_value || 1)) * 100));
                     return (
-                      <div key={rec.id || i} className="w-full bg-ink/5 relative h-full flex items-end group">
-                         <div className="w-full bg-ink border-t-2 border-ochre transition-all duration-300" style={{ height: `${heightPercent}%` }}></div>
-                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 bg-ink text-paper text-[10px] font-mono py-1 px-2 whitespace-nowrap pointer-events-none transition-opacity z-20">
+                      <div key={rec.id || i} className="w-full bg-slate-50 rounded-t-sm relative h-full flex items-end group">
+                         <div className="w-full bg-orange-400 hover:bg-orange-500 rounded-t-sm transition-colors duration-300" style={{ height: `${heightPercent}%` }}></div>
+                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 bg-slate-800 text-white text-xs font-medium py-1 px-2 rounded whitespace-nowrap pointer-events-none transition-opacity z-20 shadow-sm">
                             {rec.period_label}: {rec.actual_value}
                          </div>
                       </div>
@@ -337,15 +339,15 @@ function ResultsContent() {
       )}
 
       {/* RESULTS BY SYSTEM LEVEL */}
-      <section className="mb-16">
+      <section className="mb-12">
         <div className="mb-6">
-          <h2 className="text-xl font-serif font-bold text-ink mb-1">Results by System Level</h2>
-          <div className="flex gap-4 border-b border-divider pb-4 mt-4 overflow-x-auto hide-scrollbar">
+          <h2 className="text-xl font-bold text-slate-900 mb-1">Results by System Level</h2>
+          <div className="flex gap-4 border-b border-slate-200 pb-4 mt-4 overflow-x-auto hide-scrollbar">
             {['All', 'Goals', 'Years', 'Quarters', 'Rocks', 'Milestones'].map((filter) => (
               <button 
                 key={filter} 
                 onClick={() => setSystemLevelFilter(filter)}
-                className={`text-sm font-bold whitespace-nowrap ${systemLevelFilter === filter ? 'text-ink border-b-2 border-ochre pb-1' : 'text-ink/50 hover:text-ink'}`}
+                className={`text-sm font-semibold whitespace-nowrap ${systemLevelFilter === filter ? 'text-slate-900 border-b-2 border-orange-500 pb-1' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 {filter}
               </button>
@@ -354,69 +356,71 @@ function ResultsContent() {
         </div>
 
         <div className="mb-8">
-          <h3 className="text-[10px] font-bold text-ink uppercase tracking-widest mb-4">Filtered Ledger</h3>
-          <table className="w-full text-sm text-left border-t border-b border-divider">
-            <thead>
-              <tr className="border-b border-divider/50">
-                <th className="py-3 px-2 font-bold text-[10px] uppercase tracking-widest text-ink/50">Result</th>
-                <th className="py-3 px-2 font-bold text-[10px] uppercase tracking-widest text-ink/50 text-right">Current</th>
-                <th className="py-3 px-2 font-bold text-[10px] uppercase tracking-widest text-ink/50 text-right">Target</th>
-                <th className="py-3 px-2 font-bold text-[10px] uppercase tracking-widest text-ink/50 text-right">Progress</th>
-                <th className="py-3 px-2 font-bold text-[10px] uppercase tracking-widest text-ink/50">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {results.length === 0 && (
-                <tr>
-                  <td colSpan="5" className="py-8 px-2 text-center text-ink/50 italic text-sm border-b border-divider/50">
-                    No results match this level.
-                  </td>
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Filtered Ledger</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Result</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Current</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Target</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Progress</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                 </tr>
-              )}
-              {results.map((r) => (
-                <tr key={r.id} className="border-b border-divider/50">
-                  <td className="py-3 px-2 font-semibold text-ink">{r.name}</td>
-                  <td className="py-3 px-2 font-mono text-ink text-right">
-                    {r.currentActual !== undefined ? `${r.type === 'Currency' ? '$' : ''}${r.currentActual}` : '—'}
-                  </td>
-                  <td className="py-3 px-2 font-mono text-ink/50 text-right">
-                    {r.currentTarget !== undefined ? `${r.type === 'Currency' ? '$' : ''}${r.currentTarget}` : '—'}
-                  </td>
-                  <td className="py-3 px-2 font-mono text-ink text-right">{r.progress !== null ? `${r.progress}%` : '—'}</td>
-                  <td className={`py-3 px-2 text-[10px] font-bold uppercase tracking-widest ${r.statusColor}`}>{r.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {results.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="py-8 px-4 text-center text-slate-500 italic text-sm">
+                      No results match this level.
+                    </td>
+                  </tr>
+                )}
+                {results.map((r) => (
+                  <tr key={r.id} className="border-b border-slate-100">
+                    <td className="py-4 px-4 font-medium text-slate-900">{r.name}</td>
+                    <td className="py-4 px-4 font-mono text-slate-900 text-right">
+                      {r.currentActual !== undefined ? `${r.type === 'Currency' ? '$' : ''}${r.currentActual}` : '—'}
+                    </td>
+                    <td className="py-4 px-4 font-mono text-slate-500 text-right">
+                      {r.currentTarget !== undefined ? `${r.type === 'Currency' ? '$' : ''}${r.currentTarget}` : '—'}
+                    </td>
+                    <td className="py-4 px-4 font-mono text-slate-700 text-right">{r.progress !== null ? `${r.progress}%` : '—'}</td>
+                    <td className={`py-4 px-4 text-xs font-semibold uppercase tracking-wider ${r.statusColor}`}>{r.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
       {/* EXECUTION -> RESULTS */}
       <section className="mb-16">
         <div className="mb-6">
-          <h2 className="text-xl font-serif font-bold text-ink mb-1">Execution → Results</h2>
-          <p className="text-sm text-ink/70 mb-6">Observe the structural connection between inputs and outcomes.</p>
+          <h2 className="text-xl font-bold text-slate-900 mb-1">Execution → Results</h2>
+          <p className="text-sm text-slate-500 mb-6">Observe the structural connection between inputs and outcomes.</p>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 border border-divider p-6 bg-white relative">
-             <div className="text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-4">Input</div>
-             <div className="text-xl font-serif font-bold text-ink">Recorded Inputs</div>
-             <div className="text-2xl font-mono text-ink mt-2">See /inputs</div>
-             <div className="hidden md:block absolute right-[-24px] top-1/2 -translate-y-1/2 text-divider">→</div>
+          <div className="flex-1 rounded-xl shadow-sm border border-slate-200 p-6 bg-white relative">
+             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Input</div>
+             <div className="text-xl font-bold text-slate-900">Recorded Inputs</div>
+             <div className="text-2xl font-mono text-slate-700 mt-2">See /inputs</div>
+             <div className="hidden md:block absolute right-[-24px] top-1/2 -translate-y-1/2 text-slate-300 font-bold">→</div>
           </div>
           
-          <div className="flex-1 border border-divider p-6 bg-white relative">
-             <div className="text-[10px] font-bold text-ink/50 uppercase tracking-widest mb-4">Milestone</div>
-             <div className="text-xl font-serif font-bold text-ink">Active Milestones</div>
-             <div className="text-2xl font-mono text-ink mt-2">In Progress</div>
-             <div className="hidden md:block absolute right-[-24px] top-1/2 -translate-y-1/2 text-divider">→</div>
+          <div className="flex-1 rounded-xl shadow-sm border border-slate-200 p-6 bg-white relative">
+             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Milestone</div>
+             <div className="text-xl font-bold text-slate-900">Active Milestones</div>
+             <div className="text-2xl font-mono text-slate-700 mt-2">In Progress</div>
+             <div className="hidden md:block absolute right-[-24px] top-1/2 -translate-y-1/2 text-slate-300 font-bold">→</div>
           </div>
           
-          <div className="flex-1 border border-ochre/30 bg-ochre/5 p-6">
-             <div className="text-[10px] font-bold text-ochre uppercase tracking-widest mb-4">Result</div>
-             <div className="text-xl font-serif font-bold text-ink">{results.length > 0 ? results[0].name : "Primary Outcome"}</div>
-             <div className="text-2xl font-mono text-ink mt-2">
+          <div className="flex-1 rounded-xl shadow-sm bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 text-orange-900 p-6">
+             <div className="text-xs font-semibold text-orange-600 uppercase tracking-wider mb-4">Result</div>
+             <div className="text-xl font-bold text-orange-900">{results.length > 0 ? results[0].name : "Primary Outcome"}</div>
+             <div className="text-2xl font-mono text-orange-800 mt-2">
                 {results.length > 0 && results[0].currentActual !== undefined ? `${results[0].type === 'Currency' ? '$' : ''}${results[0].currentActual}` : '—'}
              </div>
           </div>
@@ -437,7 +441,7 @@ function ResultsContent() {
 
 export default function ResultsPage() {
   return (
-    <Suspense fallback={<div className="flex h-[50vh] items-center justify-center"><div className="text-sm font-bold animate-pulse uppercase tracking-widest text-ink/50">Loading Outcomes...</div></div>}>
+    <Suspense fallback={<div className="flex h-[50vh] items-center justify-center"><div className="text-sm font-semibold animate-pulse uppercase tracking-wider text-slate-400">Loading Outcomes...</div></div>}>
       <ResultsContent />
     </Suspense>
   );
