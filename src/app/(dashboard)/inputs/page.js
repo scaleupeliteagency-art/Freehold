@@ -94,19 +94,31 @@ export default function DailyInputsPage() {
       setContext(ctx);
 
       // 2. Fetch Inputs
-      const { data: inputDefs } = await supabase
+      const { data: inputDefs, error: inputDefsError } = await supabase
         .from("input_definitions")
         .select("*")
         .eq("system_id", activeSystem.id)
         .eq("status", "active");
 
+      if (inputDefsError) {
+        console.error(inputDefsError);
+        alert("Error fetching inputs: " + inputDefsError.message);
+        setLoading(false);
+        return;
+      }
+
       // 3. Fetch Today's Entries
       const todayStr = new Date().toISOString().split("T")[0];
-      const { data: entries } = await supabase
+      const { data: entries, error: entriesError } = await supabase
         .from("daily_input_entries")
         .select("*")
         .in("input_definition_id", (inputDefs || []).map(i => i.id))
         .eq("date", todayStr);
+        
+      if (entriesError) {
+        console.error(entriesError);
+        alert("Error fetching entries: " + entriesError.message);
+      }
 
       const formatted = (inputDefs || []).map(def => {
         const entry = entries?.find(e => e.input_definition_id === def.id);
@@ -121,6 +133,7 @@ export default function DailyInputsPage() {
 
     } catch (err) {
       console.error(err);
+      alert("Unexpected error loading data: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -156,11 +169,13 @@ export default function DailyInputsPage() {
     try {
       if (editingInput) {
         if (isStateChange) {
-           await supabase.from("input_definitions").update({ status: formData.status, end_date: formData.status === "archived" ? new Date().toISOString() : null }).eq("id", editingInput.id);
+           const { error } = await supabase.from("input_definitions").update({ status: formData.status, end_date: formData.status === "archived" ? new Date().toISOString() : null }).eq("id", editingInput.id);
+           if (error) { alert("Error: " + error.message); return; }
         } else {
-          await supabase.from("input_definitions").update({ status: "archived", end_date: new Date().toISOString() }).eq("id", editingInput.id);
+          const { error: err1 } = await supabase.from("input_definitions").update({ status: "archived", end_date: new Date().toISOString() }).eq("id", editingInput.id);
+          if (err1) { alert("Error: " + err1.message); return; }
           
-          await supabase.from("input_definitions").insert({
+          const { error: err2 } = await supabase.from("input_definitions").insert({
             system_id: system.id,
             name: formData.name,
             description: formData.description,
@@ -175,9 +190,10 @@ export default function DailyInputsPage() {
             weekly_milestone_id: editingInput.weekly_milestone_id,
             status: "active"
           });
+          if (err2) { alert("Error: " + err2.message); return; }
         }
       } else {
-        await supabase.from("input_definitions").insert({
+        const { error } = await supabase.from("input_definitions").insert({
           system_id: system.id,
           name: formData.name,
           description: formData.description,
@@ -189,12 +205,14 @@ export default function DailyInputsPage() {
           weekly_milestone_id: context?.milestoneId || null,
           status: "active"
         });
+        if (error) { alert("Insert Error: " + error.message); return; }
       }
       setIsManageOpen(false);
       setEditingInput(null);
       fetchData();
     } catch(e) {
       console.error(e);
+      alert("Unexpected error: " + e.message);
     }
   };
 
