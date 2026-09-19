@@ -9,6 +9,7 @@ import {
   ExecutionAndMomentum, 
   SystemStateWidgets 
 } from "@/components/dashboard/DashboardWidgets";
+import { TimeTrackingSummary, TimeTrackingCharts } from "@/components/dashboard/TimeTrackingWidgets";
 
 export default function DashboardPage() {
   const { 
@@ -23,7 +24,8 @@ export default function DashboardPage() {
     momentum, 
     gap, 
     mattersNow, 
-    evolution 
+    evolution,
+    timeTracking
   } = useDashboardEngine();
 
   if (loading) {
@@ -53,7 +55,15 @@ export default function DashboardPage() {
       {/* 1. HERO - Current Position */}
       <HeroWidget hero={hero} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Time Tracking Section */}
+      {timeTracking && (
+        <>
+          <TimeTrackingSummary timeTracking={timeTracking} />
+          <TimeTrackingCharts timeTracking={timeTracking} />
+        </>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
         {/* Left Column - Strategy & Trajectory (2/3 width) */}
         <div className="lg:col-span-2 space-y-8">
           {/* 2. YEARLY */}

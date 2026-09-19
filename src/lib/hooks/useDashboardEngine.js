@@ -18,7 +18,8 @@ export function useDashboardEngine() {
     gap: null,
     mattersNow: null,
     checkpoints: null,
-    evolution: null
+    evolution: null,
+    timeTracking: null
   });
 
   useEffect(() => {
@@ -65,6 +66,19 @@ export function useDashboardEngine() {
           supabase.from("result_definitions").select("*, result_records(*)").eq("system_id", system.id),
           supabase.from("system_versions").select("*").eq("system_id", system.id).order('created_at', { ascending: false }).limit(2)
         ]);
+
+        let timeEntriesLocal = [];
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data } = await supabase.from('profiles').select('preferences').eq('user_id', user.id).single();
+            if (data?.preferences?.time_entries) {
+              timeEntriesLocal = data.preferences.time_entries;
+            }
+          }
+        } catch(e) {}
+        
+        const timeEntries = timeEntriesLocal;
 
         const primaryGoal = goals?.length > 0 ? goals[0] : null;
         const secondaryGoal = goals?.length > 1 ? goals[1] : null;
@@ -265,6 +279,79 @@ export function useDashboardEngine() {
           previousVersion: sysVersions.length > 1 ? sysVersions[1].version_number : null
         } : null;
 
+        // 8. TIME TRACKING
+        const todayDStr = now.toISOString().split('T')[0];
+        
+        let todayMins = 0;
+        let weekMins = 0;
+        let monthMins = 0;
+        let quarterMins = 0;
+        
+        const d = new Date(now);
+        const dayOfWeek = d.getDay() === 0 ? 6 : d.getDay() - 1; // 0=Mon, 6=Sun
+        const weekStart = new Date(d);
+        weekStart.setDate(d.getDate() - dayOfWeek);
+        const weekStartStr = weekStart.toISOString().split('T')[0];
+        
+        const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+        const quarterStart = new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1).toISOString().split('T')[0];
+
+        (timeEntries || []).forEach(te => {
+           const mins = Number(te.duration_minutes || 0);
+           if (te.date === todayDStr) todayMins += mins;
+           if (te.date >= weekStartStr) weekMins += mins;
+           if (te.date >= monthStart) monthMins += mins;
+           if (te.date >= quarterStart) quarterMins += mins;
+        });
+
+        // Time taken per input this week
+        const inputTimeMap = {};
+        (timeEntries || []).forEach(te => {
+          if (te.date >= weekStartStr && te.duration_minutes) {
+             inputTimeMap[te.input_definition_id] = (inputTimeMap[te.input_definition_id] || 0) + (te.duration_minutes / 60);
+          }
+        });
+        const inputTimeChart = Object.entries(inputTimeMap).map(([id, hours]) => {
+          const inp = allInputs?.find(i => i.id === id);
+          return { name: inp ? inp.name : "Unknown", hours: Number(hours.toFixed(1)) };
+        }).sort((a,b) => b.hours - a.hours);
+
+        // Daily working activity each week compared to last week
+        const dailyActivityChart = [];
+        for(let i=0; i<7; i++) {
+           const cd = new Date(weekStart);
+           cd.setDate(cd.getDate() + i);
+           const cdStr = cd.toISOString().split('T')[0];
+           
+           const ld = new Date(cd);
+           ld.setDate(ld.getDate() - 7);
+           const ldStr = ld.toISOString().split('T')[0];
+           
+           let currMins = 0;
+           let lastMins = 0;
+           (timeEntries || []).forEach(te => {
+              if (te.date === cdStr) currMins += te.duration_minutes;
+              if (te.date === ldStr) lastMins += te.duration_minutes;
+           });
+           
+           dailyActivityChart.push({
+             day: cd.toLocaleDateString("en-US", { weekday: 'short' }),
+             currentWeek: Number((currMins / 60).toFixed(1)),
+             lastWeek: Number((lastMins / 60).toFixed(1))
+           });
+        }
+
+        const timeTrackingObj = {
+          summary: {
+            today: Number((todayMins / 60).toFixed(1)),
+            week: Number((weekMins / 60).toFixed(1)),
+            month: Number((monthMins / 60).toFixed(1)),
+            quarter: Number((quarterMins / 60).toFixed(1))
+          },
+          inputChart: inputTimeChart,
+          activityChart: dailyActivityChart
+        };
+
         setData({
           system,
           isFrozen,
@@ -282,7 +369,8 @@ export function useDashboardEngine() {
             { name: "Milestone Deadline", date: activeMilestone?.deadline },
             { name: "Next Review", date: system.next_review_date }
           ].filter(c => c.date),
-          evolution: evolutionObj
+          evolution: evolutionObj,
+          timeTracking: timeTrackingObj
         });
 
       } catch (err) {

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { LayoutDashboard, Settings2, CheckSquare, Target, ClipboardList, Lightbulb, History, CreditCard, UserRound, Search, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Settings2, CheckSquare, Target, ClipboardList, Lightbulb, History, CreditCard, UserRound, Search, ChevronRight, Clock } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 
 const renderTally = (count) => {
@@ -139,6 +139,7 @@ export function LedgerSidebar({ children }) {
     { label: "System", href: "/system", shortcut: "s", icon: Settings2 },
     { label: "Inputs", href: "/inputs", shortcut: "i", tally: 3, icon: CheckSquare },
     { label: "Reviews", href: "/reviews", shortcut: "v", tally: 1, icon: ClipboardList },
+    { label: "Time Tracking", href: "/time-tracking", shortcut: "t", icon: Clock },
     { label: "Insights", href: "/insights", shortcut: "k", icon: Lightbulb },
     { label: "Results", href: "/results", shortcut: "r", icon: Target },
     { label: "History", href: "/history", shortcut: "h", icon: History },
