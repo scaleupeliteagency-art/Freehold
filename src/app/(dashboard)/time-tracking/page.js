@@ -7,6 +7,11 @@ import TimeCharts from "./components/TimeCharts";
 
 import ActiveTimerScreen from "./components/ActiveTimerScreen";
 
+const getLocalISODate = (d = new Date()) => {
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().split('T')[0];
+};
+
 export default function TimeTrackingPage() {
   const [loading, setLoading] = useState(true);
   const [inputs, setInputs] = useState([]);
@@ -66,7 +71,7 @@ export default function TimeTrackingPage() {
       
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const minDate = thirtyDaysAgo.toISOString().split("T")[0];
+      const minDate = getLocalISODate(thirtyDaysAgo);
       
       const filtered = entries
         .filter(e => e.date >= minDate)
@@ -96,7 +101,7 @@ export default function TimeTrackingPage() {
   }, []);
 
   const handleStartTimer = async (inputId) => {
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = getLocalISODate(new Date());
     const startTime = new Date().toISOString();
     
     const newEntry = {

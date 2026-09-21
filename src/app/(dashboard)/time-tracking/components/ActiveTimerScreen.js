@@ -19,6 +19,7 @@ export default function ActiveTimerScreen({ activeTimer, inputName, onStop }) {
   const [elapsed, setElapsed] = useState(0);
   const [quote, setQuote] = useState(QUOTES[0]);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [pauseOffset, setPauseOffset] = useState(0); 
   const [lastPauseTime, setLastPauseTime] = useState(null);
@@ -96,6 +97,14 @@ export default function ActiveTimerScreen({ activeTimer, inputName, onStop }) {
     }
   };
 
+  const handleMinimize = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+      setIsFullscreen(false);
+    }
+    setIsMinimized(true);
+  };
+
   const playBeep = (freq = 880, duration = 0.5) => {
     try {
       if (!audioCtxRef.current) {
@@ -121,13 +130,14 @@ export default function ActiveTimerScreen({ activeTimer, inputName, onStop }) {
   useEffect(() => {
     if (elapsed >= 5400 && !isAlarming && !showBreakScreen) {
       setIsAlarming(true);
+      if (isMinimized) setIsMinimized(false); // Pop back up on alarm
       playBeep();
       alarmIntervalRef.current = setInterval(() => playBeep(), 1000);
     }
     return () => {
       if (alarmIntervalRef.current && !isAlarming) clearInterval(alarmIntervalRef.current);
     };
-  }, [elapsed, isAlarming, showBreakScreen]);
+  }, [elapsed, isAlarming, showBreakScreen, isMinimized]);
 
   const stopAlarm = () => {
     if (alarmIntervalRef.current) clearInterval(alarmIntervalRef.current);
@@ -140,6 +150,7 @@ export default function ActiveTimerScreen({ activeTimer, inputName, onStop }) {
       setIsPaused(true);
       setLastPauseTime(new Date());
     }
+    setIsMinimized(false);
     setShowBreakScreen(true);
   };
 
@@ -267,6 +278,35 @@ export default function ActiveTimerScreen({ activeTimer, inputName, onStop }) {
 
   const themeClasses = isDarkMode ? "bg-ink text-white selection:bg-ochre/30" : "bg-paper text-ink selection:bg-ochre/20";
   const boxClasses = isDarkMode ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/15 hover:text-white" : "bg-black/5 border-black/10 text-ink-muted hover:bg-black/10 hover:text-ink";
+
+  if (isMinimized) {
+    return (
+      <div className={`fixed top-4 right-8 z-[200] w-72 p-3 rounded-2xl shadow-2xl border flex flex-col gap-2 ${isDarkMode ? 'bg-ink border-white/10 text-white' : 'bg-white border-black/10 text-ink'}`}>
+        <div className="flex items-center justify-between px-1">
+          <span className="text-[10px] font-bold opacity-50 uppercase tracking-wider truncate flex-1 mr-2">{inputName}</span>
+          {isPaused && <span className="text-[10px] text-ochre font-bold uppercase animate-pulse">Paused</span>}
+        </div>
+        <div className="flex items-center justify-between">
+          <span className={`text-2xl font-bold tabular-nums tracking-tight px-1 ${isAlarming ? 'text-red-500 animate-pulse' : ''}`}>{timeString}</span>
+          <div className="flex gap-1.5">
+            <button onClick={handlePauseToggle} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-black/5 hover:bg-black/10'}`}>
+              {isPaused ? <Play className="w-3.5 h-3.5 text-ochre ml-0.5" fill="currentColor" /> : <Pause className="w-3.5 h-3.5 text-ochre" fill="currentColor" />}
+            </button>
+            <button onClick={handleStopRequest} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isDarkMode ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}>
+              <Square className="w-3.5 h-3.5" fill="currentColor" />
+            </button>
+            <button onClick={() => setIsMinimized(false)} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-black/5 hover:bg-black/10'}`}>
+              <Maximize className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+        {/* Sticky Mini Protocol Status */}
+        <div className="w-full h-1 bg-black/5 rounded-full overflow-hidden mt-1">
+          <div className={`h-full transition-all duration-1000 ${elapsed >= 5400 ? 'bg-red-500 w-full' : elapsed >= 2700 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: elapsed >= 5400 ? '100%' : `${Math.min(100, (elapsed / 2700) * 100)}%` }} />
+        </div>
+      </div>
+    );
+  }
 
   // BREAK SCREEN RENDER
   if (showBreakScreen) {
@@ -563,8 +603,12 @@ export default function ActiveTimerScreen({ activeTimer, inputName, onStop }) {
           </button>
           
           <div className={`w-px h-6 self-center mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-black/10'}`} />
+
+          <button onClick={handleMinimize} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${boxClasses}`} title="Minimize Timer to Header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14h6v6"></path><path d="M4 20l8-8"></path><path d="M20 10h-6V4"></path><path d="M20 4l-8 8"></path></svg>
+          </button>
           
-          <button onClick={toggleFullscreen} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${boxClasses}`}>
+          <button onClick={toggleFullscreen} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${boxClasses}`} title="Toggle Browser Fullscreen">
             {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
           </button>
         </div>

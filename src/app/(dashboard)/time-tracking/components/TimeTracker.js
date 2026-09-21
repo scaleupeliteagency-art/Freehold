@@ -3,10 +3,15 @@
 import { useState, useEffect } from "react";
 import { Play, Square, Plus } from "lucide-react";
 
+const getLocalISODate = (d = new Date()) => {
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().split('T')[0];
+};
+
 export default function TimeTracker({ inputs, activeTimer, onStart, onStop, onManualAdd }) {
   const [selectedInput, setSelectedInput] = useState("");
   const [manualMode, setManualMode] = useState(false);
-  const [manualDate, setManualDate] = useState(new Date().toISOString().split("T")[0]);
+  const [manualDate, setManualDate] = useState(getLocalISODate(new Date()));
   const [manualHours, setManualHours] = useState("");
   const [manualMinutes, setManualMinutes] = useState("");
   const [elapsed, setElapsed] = useState(0);

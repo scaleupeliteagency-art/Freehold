@@ -2,6 +2,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 
+const getLocalISODate = (d = new Date()) => {
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().split('T')[0];
+};
+
 export function useDashboardEngine() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({
@@ -62,7 +67,7 @@ export function useDashboardEngine() {
           supabase.from("north_star_goals").select("*").eq("system_id", system.id),
           supabase.from("quarters").select("*, year_plans!inner(system_id), monthly_rocks(*, weekly_milestones(*))").eq("year_plans.system_id", system.id).eq("status", "active").limit(1),
           supabase.from("input_definitions").select("*").eq("system_id", system.id),
-          supabase.from("daily_input_entries").select("*, input_definitions!inner(system_id)").eq("input_definitions.system_id", system.id).gte("date", new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
+          supabase.from("daily_input_entries").select("*, input_definitions!inner(system_id)").eq("input_definitions.system_id", system.id).gte("date", getLocalISODate(new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000))),
           supabase.from("result_definitions").select("*, result_records(*)").eq("system_id", system.id),
           supabase.from("system_versions").select("*").eq("system_id", system.id).order('created_at', { ascending: false }).limit(2)
         ]);
@@ -179,7 +184,7 @@ export function useDashboardEngine() {
         let todayCompletedWeight = 0;
         let todayTotalWeight = 0;
         
-        const todayStr = now.toISOString().split('T')[0];
+        const todayStr = getLocalISODate(now);
         
         activeInputs.forEach(inp => {
            const en = entries?.find(e => e.input_definition_id === inp.id && e.date === todayStr);
@@ -212,7 +217,7 @@ export function useDashboardEngine() {
         for (let i = 0; i < 90; i++) {
           const d = new Date(now);
           d.setDate(d.getDate() - i);
-          const dStr = d.toISOString().split('T')[0];
+          const dStr = getLocalISODate(d);
           
           // Find inputs valid on this day
           const validInputs = (allInputs || []).filter(inp => {
@@ -280,7 +285,7 @@ export function useDashboardEngine() {
         } : null;
 
         // 8. TIME TRACKING
-        const todayDStr = now.toISOString().split('T')[0];
+        const todayDStr = getLocalISODate(now);
         
         let todayMins = 0;
         let weekMins = 0;
@@ -291,10 +296,10 @@ export function useDashboardEngine() {
         const dayOfWeek = d.getDay() === 0 ? 6 : d.getDay() - 1; // 0=Mon, 6=Sun
         const weekStart = new Date(d);
         weekStart.setDate(d.getDate() - dayOfWeek);
-        const weekStartStr = weekStart.toISOString().split('T')[0];
+        const weekStartStr = getLocalISODate(weekStart);
         
-        const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
-        const quarterStart = new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1).toISOString().split('T')[0];
+        const monthStart = getLocalISODate(new Date(d.getFullYear(), d.getMonth(), 1));
+        const quarterStart = getLocalISODate(new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1));
 
         (timeEntries || []).forEach(te => {
            const mins = Number(te.duration_minutes || 0);
@@ -321,11 +326,11 @@ export function useDashboardEngine() {
         for(let i=0; i<7; i++) {
            const cd = new Date(weekStart);
            cd.setDate(cd.getDate() + i);
-           const cdStr = cd.toISOString().split('T')[0];
+           const cdStr = getLocalISODate(cd);
            
            const ld = new Date(cd);
            ld.setDate(ld.getDate() - 7);
-           const ldStr = ld.toISOString().split('T')[0];
+           const ldStr = getLocalISODate(ld);
            
            let currMins = 0;
            let lastMins = 0;

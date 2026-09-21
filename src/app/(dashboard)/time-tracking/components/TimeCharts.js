@@ -1,6 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+
+const getLocalISODate = (d = new Date()) => {
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().split('T')[0];
+};
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   RadialBarChart, RadialBar, Legend
@@ -16,13 +21,13 @@ export default function TimeCharts({ entries, inputs }) {
     const last7Days = Array.from({length: 7}, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      return d.toISOString().split("T")[0];
+      return getLocalISODate(d);
     }).reverse();
 
     const prior7Days = Array.from({length: 7}, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - i - 7);
-      return d.toISOString().split("T")[0];
+      return getLocalISODate(d);
     }).reverse();
 
     const grouped = entries.reduce((acc, entry) => {
@@ -49,7 +54,7 @@ export default function TimeCharts({ entries, inputs }) {
     
     // Only count this week for the input breakdown
     const last7Days = Array.from({length: 7}, (_, i) => {
-      const d = new Date(); d.setDate(d.getDate() - i); return d.toISOString().split("T")[0];
+      const d = new Date(); d.setDate(d.getDate() - i); return getLocalISODate(d);
     });
 
     const grouped = entries.reduce((acc, entry) => {

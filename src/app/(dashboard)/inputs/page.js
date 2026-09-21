@@ -1,3 +1,8 @@
+
+const getLocalISODate = (d = new Date()) => {
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().split('T')[0];
+};
 "use client";
 
 import { useState, useEffect } from "react";
@@ -108,7 +113,7 @@ export default function DailyInputsPage() {
       }
 
       // 3. Fetch Today's Entries
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = getLocalISODate(new Date());
       const { data: entries, error: entriesError } = await supabase
         .from("daily_input_entries")
         .select("*")
@@ -145,7 +150,7 @@ export default function DailyInputsPage() {
     // Optimistic UI update
     setInputs(prev => prev.map(inp => inp.id === id ? { ...inp, actual: newValue } : inp));
 
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = getLocalISODate(new Date());
     // Check if entry exists
     const { data: existing } = await supabase.from("daily_input_entries")
       .select("id")
