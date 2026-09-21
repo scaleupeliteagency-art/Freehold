@@ -1,9 +1,10 @@
+"use client";
 
 const getLocalISODate = (d = new Date()) => {
   const offset = d.getTimezoneOffset() * 60000;
   return new Date(d.getTime() - offset).toISOString().split('T')[0];
 };
-"use client";
+
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
