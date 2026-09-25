@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from "react";
 import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import RecordResultModal from "./components/RecordResultModal";
 
 function ResultsContent() {
   const [loading, setLoading] = useState(true);
@@ -13,7 +12,6 @@ function ResultsContent() {
   const [filterPeriod, setFilterPeriod] = useState("This Week");
   const [systemLevelFilter, setSystemLevelFilter] = useState("All");
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   const [handoffMilestoneName, setHandoffMilestoneName] = useState(null);
@@ -33,17 +31,17 @@ function ResultsContent() {
           setHandoffMilestoneName(milestone.name);
           
           // Check if there is a result definition connected to it
-          // Or we can just check if any of the loaded results has it if we fetched them
           const { data: def } = await supabase.from('result_definitions').select('id').eq('connected_milestone_id', milestoneId).single();
           if (def) {
             setHandoffDefinitionId(def.id);
-            setIsModalOpen(true); // Pop open modal
+            // Auto redirect to record page
+            router.push(`/results/record?definition=${def.id}&handoff=true`);
           }
         }
       }
     }
     handleHandoff();
-  }, [handoff, milestoneId, activeSystem]);
+  }, [handoff, milestoneId, activeSystem, router]);
 
   useEffect(() => {
     async function fetchResults() {
@@ -147,30 +145,7 @@ function ResultsContent() {
     fetchResults();
   }, [refreshTrigger]);
 
-  const handleSaveResult = async (recordData) => {
-    try {
-      const { error } = await supabase.from("result_records").insert({
-        result_definition_id: recordData.definition_id,
-        period_label: recordData.period_label,
-        actual_value: recordData.actual_value,
-        target_value: recordData.target_value,
-        baseline_value: recordData.baseline_value,
-      });
 
-      if (error) throw error;
-      
-      setIsModalOpen(false);
-      setRefreshTrigger(prev => prev + 1);
-      
-      // Clear handoff from url to avoid reappearing
-      if (handoff === 'true') {
-        router.replace('/results');
-      }
-    } catch (err) {
-      console.error("Error saving result:", err);
-      alert("Failed to save result.");
-    }
-  };
 
   if (loading) {
     return (
@@ -200,11 +175,12 @@ function ResultsContent() {
             <h2 className="text-xl font-bold text-slate-900">You achieved: {handoffMilestoneName}. What was the exact measurable result generated?</h2>
             <p className="text-sm text-slate-500 mt-1">There is no measurable result connected to this milestone. Please define one to continue the Ledger.</p>
           </div>
-          <button 
+          <Link 
+            href={`/results/define?milestone=${milestoneId}`}
             className="bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg px-4 py-2 shadow-sm transition-colors shrink-0"
           >
             Define Result
-          </button>
+          </Link>
         </div>
       )}
 
@@ -224,12 +200,12 @@ function ResultsContent() {
             <option>This Month</option>
             <option>This Quarter</option>
           </select>
-          <button 
-            onClick={() => setIsModalOpen(true)}
+          <Link 
+            href="/results/record"
             className="bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg px-4 py-2 shadow-sm transition-colors"
           >
             + Record Result
-          </button>
+          </Link>
         </div>
       </div>
       
@@ -246,9 +222,9 @@ function ResultsContent() {
           <div className="border border-slate-200 rounded-xl shadow-sm bg-white p-12 text-center">
             <h3 className="text-lg font-bold text-slate-900 mb-2">No results recorded yet.</h3>
             <p className="text-sm text-slate-500 mb-6 max-w-sm mx-auto">Define the outcomes that matter to your system, then record what actually happens.</p>
-            <button className="bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg px-4 py-2 shadow-sm transition-colors">
+            <Link href="/results/define" className="bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg px-4 py-2 shadow-sm transition-colors inline-block">
               Define a Result
-            </button>
+            </Link>
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -426,14 +402,6 @@ function ResultsContent() {
           </div>
         </div>
       </section>
-
-      <RecordResultModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        definitions={results}
-        onSave={handleSaveResult}
-        initialDefinitionId={handoffDefinitionId}
-      />
 
     </div>
   );

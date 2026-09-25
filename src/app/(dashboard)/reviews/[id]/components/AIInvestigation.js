@@ -27,7 +27,10 @@ export default function AIInvestigation({ reviewState, setReviewState, onNext, o
           body: JSON.stringify(payload)
         });
 
-        if (!res.ok) throw new Error("Failed to fetch AI analysis");
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || "Failed to fetch AI analysis");
+        }
         
         const data = await res.json();
         setReviewState(prev => ({ ...prev, aiAnalysis: data }));

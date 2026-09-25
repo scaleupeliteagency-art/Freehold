@@ -3,7 +3,7 @@ import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
-export default function ReviewSummary({ reviewState, onBack }) {
+export default function ReviewSummary({ reviewState, reviewContext, onBack }) {
   const [saving, setSaving] = useState(false);
   const router = useRouter();
 
@@ -11,7 +11,9 @@ export default function ReviewSummary({ reviewState, onBack }) {
     setSaving(true);
     try {
       let versionId = null;
-      if (reviewState.milestoneAchieved) {
+      const hasChanges = (reviewState.inputChanges && reviewState.inputChanges.length > 0) || (reviewState.newInputs && reviewState.newInputs.length > 0);
+
+      if (reviewState.milestoneAchieved || hasChanges) {
         const snapshot = {
           inputs: reviewState.inputs,
           milestone: reviewState.milestone,
@@ -27,10 +29,12 @@ export default function ReviewSummary({ reviewState, onBack }) {
         versionId = vData?.[0]?.id;
       }
 
-      if (reviewState.milestoneAchieved && reviewState.inputChanges.length > 0) {
-        for (const change of reviewState.inputChanges) {
-          const oldInput = reviewState.inputs.find(i => i.id === change.id);
-          if (!oldInput) continue;
+      if (hasChanges) {
+        // Process existing input changes
+        if (reviewState.inputChanges) {
+          for (const change of reviewState.inputChanges) {
+            const oldInput = reviewState.inputs.find(i => i.id === change.id);
+            if (!oldInput) continue;
 
           if (change.action === 'ARCHIVE' || change.action === 'PAUSE' || change.action === 'REPLACE') {
             await supabase.from("input_definitions").update({
@@ -53,6 +57,23 @@ export default function ReviewSummary({ reviewState, onBack }) {
               active_status: true
             });
           }
+          }
+        }
+        
+        // Insert newly added inputs
+        if (reviewState.newInputs) {
+          for (const newInput of reviewState.newInputs) {
+            await supabase.from("input_definitions").insert({
+              system_id: reviewState.system.id,
+              weekly_milestone_id: reviewState.milestone?.id || null,
+              name: newInput.name,
+              target: newInput.target,
+              frequency: newInput.frequency,
+              unit: newInput.unit || '',
+              weight: newInput.weight || 10,
+              active_status: true
+            });
+          }
         }
       }
 
@@ -64,8 +85,10 @@ export default function ReviewSummary({ reviewState, onBack }) {
 
       await supabase.from("reviews").insert({
         system_id: reviewState.system.id,
-        type: "WEEKLY",
+        type: reviewContext?.type || "WEEKLY",
         status: "COMPLETED",
+        period_start: reviewContext?.periodStart || null,
+        period_end: reviewContext?.periodEnd || null,
         summary: reviewState.aiAnalysis?.summary || "Completed manual review",
         investigation: reviewState.aiAnalysis
       });
@@ -97,7 +120,7 @@ export default function ReviewSummary({ reviewState, onBack }) {
       <h2 className="text-2xl font-bold text-gray-900 mb-4">Investigation Complete</h2>
       <p className="text-sm text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
         Your operating system has been analyzed. 
-        {reviewState.milestoneAchieved 
+        {(reviewState.milestoneAchieved || hasChanges)
           ? " Your new system version will be snapshotted and inputs evolved. Next, you will record your exact results." 
           : " The system will continue tracking execution for the next period."}
       </p>

@@ -1,4 +1,4 @@
-export async function fetchGroqAnalysis(systemPrompt, userPrompt, model = "llama3-70b-8192") {
+export async function fetchGroqAnalysis(systemPrompt, userPrompt, model = "qwen/qwen3.8-27b") {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("GROQ_API_KEY is not set.");
 

@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
 export default function InputEvolution({ reviewState, setReviewState, onNext, onBack }) {
-  const { inputs, milestoneAchieved, inputChanges } = reviewState;
+  const { inputs, milestoneAchieved, inputChanges, newInputs = [] } = reviewState;
 
   const handleAction = (inputId, action) => {
     setReviewState(prev => {
@@ -13,31 +14,40 @@ export default function InputEvolution({ reviewState, setReviewState, onNext, on
     });
   };
 
+  const [isAdding, setIsAdding] = useState(false);
+  const [newInputDraft, setNewInputDraft] = useState({ name: '', target: '', unit: '', frequency: 'Daily', weight: 10 });
+
+  const handleAddNew = () => {
+    if (!newInputDraft.name || !newInputDraft.target) return;
+    setReviewState(prev => ({
+      ...prev,
+      newInputs: [...(prev.newInputs || []), { ...newInputDraft, id: Date.now().toString() }]
+    }));
+    setIsAdding(false);
+    setNewInputDraft({ name: '', target: '', unit: '', frequency: 'Daily', weight: 10 });
+  };
+
+  const handleRemoveNew = (id) => {
+    setReviewState(prev => ({
+      ...prev,
+      newInputs: (prev.newInputs || []).filter(i => i.id !== id)
+    }));
+  };
+
   const updateTarget = (inputId, target) => {
     setReviewState(prev => {
       return { ...prev, inputChanges: prev.inputChanges.map(c => c.id === inputId ? { ...c, newTarget: target } : c) };
     });
   };
 
-  if (!milestoneAchieved) {
-    return (
-      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Continue Execution</h2>
-        <p className="text-sm text-gray-500 mb-8 max-w-md mx-auto">You have not achieved the milestone yet. The system recommends continuing with current inputs.</p>
-        <div className="flex justify-center gap-4">
-          <button onClick={onBack} className="text-gray-600 px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors">Back</button>
-          <button onClick={onNext} className="bg-orange-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors shadow-sm">Proceed</button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Input Evolution</h2>
         <p className="text-gray-500 text-sm leading-relaxed">
-          Milestone achieved. Your previous inputs were designed for this milestone. Review your operating inputs before beginning the next period.
+          {milestoneAchieved 
+            ? "Milestone achieved. Evolve your operating inputs before beginning the next period." 
+            : "Milestone not achieved. You may keep your inputs to try again, or evolve your strategy by adding or removing inputs."}
         </p>
       </div>
 
@@ -83,6 +93,59 @@ export default function InputEvolution({ reviewState, setReviewState, onNext, on
             </div>
           );
         })}
+      </div>
+
+      <div className="mt-8 pt-8 border-t border-gray-100">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">New Inputs</h3>
+        
+        {newInputs.length > 0 && (
+          <div className="space-y-4 mb-6">
+            {newInputs.map(input => (
+              <div key={input.id} className="bg-orange-50 rounded-xl p-4 flex justify-between items-center border border-orange-100">
+                <div>
+                  <div className="font-semibold text-gray-900 text-sm mb-1">{input.name}</div>
+                  <div className="font-mono text-xs text-gray-500">Target: {input.target} {input.unit} / {input.frequency}</div>
+                </div>
+                <button onClick={() => handleRemoveNew(input.id)} className="text-red-500 text-sm hover:underline font-medium">Remove</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {isAdding ? (
+          <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+            <h4 className="text-sm font-bold text-gray-900 mb-4">Create New Input</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                <input type="text" value={newInputDraft.name} onChange={e => setNewInputDraft({...newInputDraft, name: e.target.value})} className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" placeholder="e.g. Outreach Emails" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Target</label>
+                <input type="number" value={newInputDraft.target} onChange={e => setNewInputDraft({...newInputDraft, target: e.target.value})} className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" placeholder="e.g. 50" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Unit</label>
+                <input type="text" value={newInputDraft.unit} onChange={e => setNewInputDraft({...newInputDraft, unit: e.target.value})} className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" placeholder="e.g. emails" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Frequency</label>
+                <select value={newInputDraft.frequency} onChange={e => setNewInputDraft({...newInputDraft, frequency: e.target.value})} className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500">
+                  <option value="Daily">Daily</option>
+                  <option value="Weekly">Weekly</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setIsAdding(false)} className="px-4 py-2 text-sm text-gray-600 font-medium">Cancel</button>
+              <button onClick={handleAddNew} className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-black transition-colors">Add Input</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setIsAdding(true)} className="w-full py-4 border-2 border-dashed border-gray-200 rounded-xl text-gray-500 font-medium hover:bg-gray-50 hover:text-gray-900 transition-colors text-sm">
+            + Add New Strategy Input
+          </button>
+        )}
       </div>
 
       <div className="pt-8 flex justify-between items-center mt-8 border-t border-gray-100">

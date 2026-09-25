@@ -29,7 +29,7 @@ Return a structured JSON object exactly matching this schema:
     
     return NextResponse.json(analysis);
   } catch (error) {
-    console.error("AI Investigation Error:", error);
+    console.error("AI Investigation Error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

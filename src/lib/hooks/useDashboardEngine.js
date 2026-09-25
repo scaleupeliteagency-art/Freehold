@@ -253,16 +253,17 @@ export function useDashboardEngine() {
         
         // streak
         for (let i=0; i<90; i++) {
+          if (heatmap[i].inputsExpected === 0) continue; // ignore days with no inputs
           if (heatmap[i].score >= 80) streak++;
           else if (i === 0 && heatmap[0].score < 80) continue; // today can be ignored if pending
           else break;
         }
         
         // 7 days
-        const last7 = heatmap.slice(0, 7);
-        const prev7 = heatmap.slice(7, 14);
-        last7Score = last7.reduce((a,b)=>a+b.score, 0)/7;
-        prev7Score = prev7.reduce((a,b)=>a+b.score, 0)/7;
+        const last7 = heatmap.slice(0, 7).filter(d => d.inputsExpected > 0);
+        const prev7 = heatmap.slice(7, 14).filter(d => d.inputsExpected > 0);
+        last7Score = last7.length > 0 ? last7.reduce((a,b)=>a+b.score, 0)/last7.length : 0;
+        prev7Score = prev7.length > 0 ? prev7.reduce((a,b)=>a+b.score, 0)/prev7.length : 0;
         
         const momentumObj = {
           streak,
@@ -318,8 +319,8 @@ export function useDashboardEngine() {
         });
         const inputTimeChart = Object.entries(inputTimeMap).map(([id, hours]) => {
           const inp = allInputs?.find(i => i.id === id);
-          return { name: inp ? inp.name : "Unknown", hours: Number(hours.toFixed(1)) };
-        }).sort((a,b) => b.hours - a.hours);
+          return { name: inp ? inp.name : "Unknown", minutes: Math.round(hours * 60) };
+        }).sort((a,b) => b.minutes - a.minutes);
 
         // Daily working activity each week compared to last week
         const dailyActivityChart = [];
@@ -341,17 +342,17 @@ export function useDashboardEngine() {
            
            dailyActivityChart.push({
              day: cd.toLocaleDateString("en-US", { weekday: 'short' }),
-             currentWeek: Number((currMins / 60).toFixed(1)),
-             lastWeek: Number((lastMins / 60).toFixed(1))
+             currentWeekMins: currMins,
+             lastWeekMins: lastMins
            });
         }
 
         const timeTrackingObj = {
           summary: {
-            today: Number((todayMins / 60).toFixed(1)),
-            week: Number((weekMins / 60).toFixed(1)),
-            month: Number((monthMins / 60).toFixed(1)),
-            quarter: Number((quarterMins / 60).toFixed(1))
+            today: todayMins,
+            week: weekMins,
+            month: monthMins,
+            quarter: quarterMins
           },
           inputChart: inputTimeChart,
           activityChart: dailyActivityChart

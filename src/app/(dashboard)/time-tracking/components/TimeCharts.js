@@ -12,6 +12,22 @@ import {
 
 const RADIAL_COLORS = ['#bae6fd', '#38bdf8', '#0284c7']; // Light to dark blue
 
+const formatDuration = (totalMinutes) => {
+  if (!totalMinutes) return "0 min";
+  const hours = Math.floor(totalMinutes / 60);
+  const remainingMinutes = totalMinutes % 60;
+  const minutes = Math.floor(remainingMinutes);
+  const seconds = Math.round((remainingMinutes - minutes) * 60);
+
+  let parts = [];
+  if (hours > 0) parts.push(`${hours} hours`);
+  if (minutes > 0) parts.push(`${minutes} min`);
+  if (seconds > 0) parts.push(`${seconds} second${seconds !== 1 ? 's' : ''}`);
+  
+  if (parts.length === 0) return "0 min";
+  return parts.join(" ");
+};
+
 export default function TimeCharts({ entries, inputs }) {
   
   const dailyData = useMemo(() => {
@@ -86,8 +102,21 @@ export default function TimeCharts({ entries, inputs }) {
     let totalTimed = 0;
     entries.forEach(entry => {
       if (entry.start_time && entry.duration_minutes) {
-        const startHour = new Date(entry.start_time).getHours();
-        hourCounts[startHour] += entry.duration_minutes;
+        const startDate = new Date(entry.start_time);
+        let remainingMinutes = entry.duration_minutes;
+        let currentHour = startDate.getHours();
+        let currentMinute = startDate.getMinutes();
+
+        while (remainingMinutes > 0) {
+          const minutesInCurrentHour = 60 - currentMinute;
+          const minutesToAdd = Math.min(remainingMinutes, minutesInCurrentHour);
+          
+          hourCounts[currentHour % 24] += minutesToAdd;
+          
+          remainingMinutes -= minutesToAdd;
+          currentHour++;
+          currentMinute = 0;
+        }
         totalTimed += entry.duration_minutes;
       }
     });
@@ -95,18 +124,18 @@ export default function TimeCharts({ entries, inputs }) {
     return hourCounts.map((mins, hour) => ({ hour, mins }))
       .filter(item => item.mins > 0)
       .sort((a, b) => b.mins - a.mins)
-      .slice(0, 3)
       .map(item => {
         const ampm = item.hour >= 12 ? 'PM' : 'AM';
         const h = item.hour % 12 || 12;
         return {
           slot: `${h}:00 ${ampm} - ${h === 11 ? '12:00 PM' : h === 23 ? '12:00 AM' : (h+1)+':00 '+ampm}`,
-          minutes: Math.round(item.mins)
+          minutes: item.mins
         };
       });
   }, [entries]);
 
-  const totalHoursWeek = dailyData.reduce((sum, d) => sum + d["This Week"], 0).toFixed(1);
+  const totalHoursWeek = dailyData.reduce((sum, d) => sum + d["This Week"], 0);
+  const totalMinutesWeek = totalHoursWeek * 60;
 
   // Custom Legend for the Radial Chart
   const renderRadialLegend = (props) => {
@@ -121,7 +150,7 @@ export default function TimeCharts({ entries, inputs }) {
               <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: entry.color }} />
               <span className="text-slate-600 font-medium">{entry.payload.name}</span>
             </div>
-            <span className="font-bold text-slate-900">{entry.payload.hours} hrs</span>
+            <span className="font-bold text-slate-900">{formatDuration(entry.payload.hours * 60)}</span>
           </div>
         ))}
       </div>
@@ -135,25 +164,31 @@ export default function TimeCharts({ entries, inputs }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center">
           <div className="text-sm font-medium text-slate-500 mb-1">Last 7 Days</div>
-          <div className="text-4xl font-bold text-slate-900">{totalHoursWeek} <span className="text-xl font-medium text-slate-500">hrs</span></div>
+          <div className="text-xl font-bold text-slate-900">{formatDuration(totalMinutesWeek)}</div>
         </div>
         
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="text-sm font-medium text-slate-500 mb-4">Most Productive Slots</div>
+          <div className="text-sm font-medium text-slate-500 mb-4">Most Productive Slots (Total)</div>
           {productiveSlots.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[140px] overflow-y-auto pr-2 custom-scrollbar">
               {productiveSlots.map((slot, i) => (
                 <div key={i} className="flex justify-between items-center text-sm">
                   <div className="flex items-center gap-3">
                     <span className="text-ochre/80 font-bold">#{i+1}</span>
                     <span className="font-medium text-slate-700">{slot.slot}</span>
                   </div>
-                  <span className="text-slate-600 font-semibold">{Math.round(slot.minutes / 60 * 10) / 10} hrs</span>
+                  <span className="text-slate-600 font-semibold">{formatDuration(slot.minutes)}</span>
                 </div>
               ))}
             </div>
           ) : (
             <div className="text-sm text-slate-400">Not enough timed data yet. Use the timer to calculate slots.</div>
+          )}
+          {productiveSlots.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center text-sm font-bold text-slate-900">
+              <span>Total Time in Slots</span>
+              <span>{formatDuration(productiveSlots.reduce((sum, slot) => sum + slot.minutes, 0))}</span>
+            </div>
           )}
         </div>
       </div>
@@ -167,23 +202,19 @@ export default function TimeCharts({ entries, inputs }) {
             <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded">Last 7 Days</span>
           </div>
           <div className="h-64 w-full flex-1">
-            {dailyData.some(d => d["This Week"] > 0 || d["Last Week"] > 0) ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dailyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                  <RechartsTooltip 
-                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                    itemStyle={{ fontWeight: 600 }}
-                  />
-                  <Line type="monotone" dataKey="Last Week" stroke="#60a5fa" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="This Week" stroke="#f97316" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-sm text-slate-400">No data for the last 14 days</div>
-            )}
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={dailyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                <RechartsTooltip 
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  itemStyle={{ fontWeight: 600 }}
+                />
+                <Line type="monotone" dataKey="Last Week" stroke="#60a5fa" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="This Week" stroke="#f97316" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
@@ -210,7 +241,7 @@ export default function TimeCharts({ entries, inputs }) {
                         cornerRadius={10}
                       />
                       <RechartsTooltip 
-                        formatter={(value) => [`${value} hrs`, 'Time']}
+                        formatter={(value) => [formatDuration(value * 60), 'Time']}
                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                       />
                     </RadialBarChart>
@@ -225,7 +256,7 @@ export default function TimeCharts({ entries, inputs }) {
                           <div className="w-3 h-3 rounded-[2px]" style={{ backgroundColor: entry.fill }} />
                           <span className="text-slate-500 font-medium">{entry.name}</span>
                         </div>
-                        <span className="font-bold text-slate-900">{entry.hours} hrs</span>
+                        <span className="font-bold text-slate-900">{formatDuration(entry.hours * 60)}</span>
                       </div>
                     ))}
                   </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Check, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import useReviewEngineStore from "@/lib/store/useReviewEngineStore";
 
 // Import components that we will rewrite
 import DataAssembly from "./components/DataAssembly";
@@ -18,6 +19,8 @@ export default function ReviewFlow() {
   
   const [currentStep, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
+  
+  const reviewContext = useReviewEngineStore(state => state.reviewContext);
   
   // The global state for the review
   const [reviewState, setReviewState] = useState({
@@ -39,8 +42,17 @@ export default function ReviewFlow() {
       const system = systems[0];
 
       // Fetch active milestone
-      const { data: milestones } = await supabase.from("weekly_milestones").select("*, monthly_rocks!inner(quarter_id)").eq("status", "active").limit(1);
-      const activeMilestone = milestones?.[0] || null;
+      const { data: quarters } = await supabase.from("quarters")
+        .select("*, year_plans!inner(system_id), monthly_rocks(*, weekly_milestones(*))")
+        .eq("year_plans.system_id", system.id)
+        .eq("status", "active")
+        .limit(1);
+        
+      const quarter = quarters?.[0] || null;
+      const rocks = quarter?.monthly_rocks || [];
+      const activeRock = rocks.find(r => r.status === 'active') || rocks[0] || null;
+      const ms = activeRock?.weekly_milestones || [];
+      const activeMilestone = ms.find(m => m.status === 'active') || ms[0] || null;
 
       // Fetch active inputs
       const { data: inputs } = await supabase.from("input_definitions").select("*").eq("system_id", system.id).eq("active_status", true);
@@ -118,7 +130,7 @@ export default function ReviewFlow() {
           {currentStep === 2 && <AIInvestigation reviewState={reviewState} setReviewState={setReviewState} onNext={() => setStep(3)} onBack={() => setStep(1)} />}
           {currentStep === 3 && <MilestoneVerification reviewState={reviewState} setReviewState={setReviewState} onNext={() => setStep(4)} onBack={() => setStep(2)} />}
           {currentStep === 4 && <InputEvolution reviewState={reviewState} setReviewState={setReviewState} onNext={() => setStep(5)} onBack={() => setStep(3)} />}
-          {currentStep === 5 && <ReviewSummary reviewState={reviewState} onBack={() => setStep(4)} />}
+          {currentStep === 5 && <ReviewSummary reviewState={reviewState} reviewContext={reviewContext} onBack={() => setStep(4)} />}
         </div>
       </main>
     </div>
