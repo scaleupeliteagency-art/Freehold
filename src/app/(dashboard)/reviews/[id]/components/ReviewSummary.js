@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 export default function ReviewSummary({ reviewState, reviewContext, onBack }) {
   const [saving, setSaving] = useState(false);
   const router = useRouter();
+  
+  const hasChanges = (reviewState.inputChanges && reviewState.inputChanges.length > 0) || (reviewState.newInputs && reviewState.newInputs.length > 0);
 
   const handleComplete = async () => {
     setSaving(true);
     try {
       let versionId = null;
-      const hasChanges = (reviewState.inputChanges && reviewState.inputChanges.length > 0) || (reviewState.newInputs && reviewState.newInputs.length > 0);
 
       if (reviewState.milestoneAchieved || hasChanges) {
         const snapshot = {
