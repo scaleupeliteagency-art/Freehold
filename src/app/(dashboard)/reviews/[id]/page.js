@@ -6,7 +6,6 @@ import { Check, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import useReviewEngineStore from "@/lib/store/useReviewEngineStore";
 
-// Import components that we will rewrite
 import DataAssembly from "./components/DataAssembly";
 import AIInvestigation from "./components/AIInvestigation";
 import MilestoneVerification from "./components/MilestoneVerification";
@@ -14,56 +13,91 @@ import InputEvolution from "./components/InputEvolution";
 import ReviewSummary from "./components/ReviewSummary";
 
 export default function ReviewFlow() {
-  const { id } = useParams(); // 'id' will be something like 'rev_12345'
+  const { id } = useParams();
   const router = useRouter();
-  
+
   const [currentStep, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
-  
-  const reviewContext = useReviewEngineStore(state => state.reviewContext);
-  
-  // The global state for the review
+
+  const reviewContext = useReviewEngineStore((state) => state.reviewContext);
+
   const [reviewState, setReviewState] = useState({
     system: null,
     milestone: null,
     inputs: [],
     entries: [],
+    goalHierarchy: null,
+    assembledDataPayload: null,
+    assembled: false,
     aiAnalysis: null,
+    investigationComplete: false,
     milestoneAchieved: false,
-    inputChanges: [], // To track evolved inputs
-    resultHandoff: false
+    inputChanges: [],
+    newInputs: [],
+    acceptedCorrectiveActions: [],
+    resultHandoff: false,
   });
 
   useEffect(() => {
     async function loadData() {
-      // Fetch active system
-      const { data: systems } = await supabase.from("systems").select("*").eq("status", "active").limit(1);
-      if (!systems || systems.length === 0) return;
-      const system = systems[0];
+      try {
+        // Fetch active system
+        const { data: systems } = await supabase
+          .from("systems")
+          .select("*")
+          .eq("status", "active")
+          .limit(1);
 
-      // Fetch active milestone
-      const { data: quarters } = await supabase.from("quarters")
-        .select("*, year_plans!inner(system_id), monthly_rocks(*, weekly_milestones(*))")
-        .eq("year_plans.system_id", system.id)
-        .eq("status", "active")
-        .limit(1);
-        
-      const quarter = quarters?.[0] || null;
-      const rocks = quarter?.monthly_rocks || [];
-      const activeRock = rocks.find(r => r.status === 'active') || rocks[0] || null;
-      const ms = activeRock?.weekly_milestones || [];
-      const activeMilestone = ms.find(m => m.status === 'active') || ms[0] || null;
+        if (!systems || systems.length === 0) {
+          setLoading(false);
+          return;
+        }
+        const system = systems[0];
 
-      // Fetch active inputs
-      const { data: inputs } = await supabase.from("input_definitions").select("*").eq("system_id", system.id).eq("active_status", true);
+        // Fetch active milestone (lightweight — full hierarchy assembled in DataAssembly)
+        const { data: quarters } = await supabase
+          .from("quarters")
+          .select("*, year_plans!inner(system_id), monthly_rocks(*, weekly_milestones(*))")
+          .eq("year_plans.system_id", system.id)
+          .eq("status", "active")
+          .limit(1);
 
-      setReviewState(prev => ({ ...prev, system, milestone: activeMilestone, inputs: inputs || [] }));
-      setLoading(false);
+        const quarter = quarters?.[0] || null;
+        const rocks = quarter?.monthly_rocks || [];
+        const activeRock = rocks.find((r) => r.status === "active") || rocks[0] || null;
+        const ms = activeRock?.weekly_milestones || [];
+        const activeMilestone = ms.find((m) => m.status === "active") || ms[0] || null;
+
+        // Fetch active inputs
+        const { data: inputs } = await supabase
+          .from("input_definitions")
+          .select("*")
+          .eq("system_id", system.id)
+          .eq("active_status", true);
+
+        setReviewState((prev) => ({
+          ...prev,
+          system,
+          milestone: activeMilestone,
+          inputs: inputs || [],
+        }));
+      } catch (err) {
+        console.error("[ReviewFlow] Error loading initial data:", err.message);
+      } finally {
+        setLoading(false);
+      }
     }
+
     loadData();
   }, []);
 
-  if (loading) return <div className="p-12 text-center text-sm font-semibold text-gray-500 animate-pulse">Initializing Investigation Engine...</div>;
+  if (loading) {
+    return (
+      <div className="p-12 text-center text-sm font-semibold text-gray-500 animate-pulse">
+        Initializing Investigation Engine...
+      </div>
+    );
+  }
 
   const steps = [
     { id: 1, name: "Data Assembly" },
@@ -87,7 +121,9 @@ export default function ReviewFlow() {
             <h1 className="text-xl font-semibold text-gray-900">Diagnostic Analysis</h1>
           </div>
           <div className="text-right">
-            <div className="text-xs font-medium text-gray-500 mt-1">Step {currentStep} of {steps.length}</div>
+            <div className="text-xs font-medium text-gray-500 mt-1">
+              Step {currentStep} of {steps.length}
+            </div>
           </div>
         </div>
       </header>
@@ -101,21 +137,30 @@ export default function ReviewFlow() {
                 <button
                   onClick={() => currentStep > step.id && setStep(step.id)}
                   className={`flex items-center gap-2.5 px-3 py-1 text-sm font-semibold transition-colors
-                    ${currentStep === step.id ? "text-orange-600" :
-                      currentStep > step.id ? "text-gray-900 cursor-pointer hover:text-orange-600" :
-                      "text-gray-400 cursor-default"}`}
+                    ${currentStep === step.id
+                      ? "text-orange-600"
+                      : currentStep > step.id
+                      ? "text-gray-900 cursor-pointer hover:text-orange-600"
+                      : "text-gray-400 cursor-default"}`}
                 >
-                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 transition-colors
-                    ${currentStep === step.id ? "bg-orange-600 text-white shadow-sm" :
-                      currentStep > step.id ? "bg-gray-900 text-white" :
-                      "bg-gray-100 text-gray-400"}`}
+                  <span
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 transition-colors
+                      ${currentStep === step.id
+                        ? "bg-orange-600 text-white shadow-sm"
+                        : currentStep > step.id
+                        ? "bg-gray-900 text-white"
+                        : "bg-gray-100 text-gray-400"}`}
                   >
                     {currentStep > step.id ? <Check className="w-3.5 h-3.5" /> : step.id}
                   </span>
                   <span className="hidden md:block">{step.name}</span>
                 </button>
                 {idx < steps.length - 1 && (
-                  <div className={`w-10 h-[2px] mx-2 shrink-0 rounded-full transition-colors ${currentStep > step.id ? "bg-gray-900" : "bg-gray-200"}`} />
+                  <div
+                    className={`w-10 h-[2px] mx-2 shrink-0 rounded-full transition-colors ${
+                      currentStep > step.id ? "bg-gray-900" : "bg-gray-200"
+                    }`}
+                  />
                 )}
               </div>
             ))}
@@ -126,11 +171,46 @@ export default function ReviewFlow() {
       {/* Step Content */}
       <main className="mx-auto w-full px-6 py-12">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 sm:p-10">
-          {currentStep === 1 && <DataAssembly reviewState={reviewState} setReviewState={setReviewState} onNext={() => setStep(2)} />}
-          {currentStep === 2 && <AIInvestigation reviewState={reviewState} setReviewState={setReviewState} onNext={() => setStep(3)} onBack={() => setStep(1)} />}
-          {currentStep === 3 && <MilestoneVerification reviewState={reviewState} setReviewState={setReviewState} onNext={() => setStep(4)} onBack={() => setStep(2)} />}
-          {currentStep === 4 && <InputEvolution reviewState={reviewState} setReviewState={setReviewState} onNext={() => setStep(5)} onBack={() => setStep(3)} />}
-          {currentStep === 5 && <ReviewSummary reviewState={reviewState} reviewContext={reviewContext} onBack={() => setStep(4)} />}
+          {currentStep === 1 && (
+            <DataAssembly
+              reviewState={reviewState}
+              setReviewState={setReviewState}
+              reviewContext={reviewContext}
+              onNext={() => setStep(2)}
+            />
+          )}
+          {currentStep === 2 && (
+            <AIInvestigation
+              reviewState={reviewState}
+              setReviewState={setReviewState}
+              reviewContext={reviewContext}
+              onNext={() => setStep(3)}
+              onBack={() => setStep(1)}
+            />
+          )}
+          {currentStep === 3 && (
+            <MilestoneVerification
+              reviewState={reviewState}
+              setReviewState={setReviewState}
+              onNext={() => setStep(4)}
+              onBack={() => setStep(2)}
+            />
+          )}
+          {currentStep === 4 && (
+            <InputEvolution
+              reviewState={reviewState}
+              setReviewState={setReviewState}
+              onNext={() => setStep(5)}
+              onBack={() => setStep(3)}
+            />
+          )}
+          {currentStep === 5 && (
+            <ReviewSummary
+              reviewState={reviewState}
+              reviewContext={reviewContext}
+              onBack={() => setStep(4)}
+            />
+          )}
         </div>
       </main>
     </div>
