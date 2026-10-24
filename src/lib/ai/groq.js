@@ -1,24 +1,14 @@
-/**
- * Groq AI client for server-side API routes.
- *
- * IMPORTANT: process.env.GROQ_API_KEY must be set in the deployment
- * environment (e.g. Vercel environment variables). It is NOT available
- * from .env.local in production unless configured in the deployment.
- */
 
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_API_URL =
+  "https://api.groq.com/openai/v1/chat/completions";
+
 const DEFAULT_MODEL = "openai/gpt-oss-120b";
-const REQUEST_TIMEOUT_MS = 60000; // 60 seconds
+const REQUEST_TIMEOUT_MS = 60000;
 
-/**
- * Call the Groq Chat Completions API.
- *
- * @param {string} systemPrompt
- * @param {string} userPrompt
- * @param {string} [model]
- * @param {number} [maxRetries=1]
- * @returns {Promise<object|string>} Parsed JSON object or raw string
- */
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function fetchGroqAnalysis(
   systemPrompt,
   userPrompt,
@@ -29,25 +19,22 @@ export async function fetchGroqAnalysis(
 
   if (!apiKey) {
     throw new Error(
-      "GROQ_API_KEY environment variable is not configured. " +
-        "Add it to your deployment environment variables " +
-        "(e.g. the Vercel dashboard), not only to .env.local."
+      "GROQ_API_KEY is not configured. Add it to your environment variables."
     );
   }
 
-  let lastError = null;
+  let lastError;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    let timeoutId;
+    let response;
 
     try {
       const controller = new AbortController();
 
-      timeoutId = setTimeout(() => {
-        controller.abort();
-      }, REQUEST_TIMEOUT_MS);
-
-      let response;
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        REQUEST_TIMEOUT_MS
+      );
 
       try {
         response = await fetch(GROQ_API_URL, {
@@ -72,124 +59,69 @@ export async function fetchGroqAnalysis(
         clearTimeout(timeoutId);
       }
 
-      // Handle HTTP error responses.
       if (!response.ok) {
-        const errText = await response.text().catch(() => "(no body)");
-
-        if (response.status === 401) {
-          throw new Error(
-            "Groq API authentication failed (401). " +
-              "Verify that GROQ_API_KEY is correctly set in your environment."
-          );
-        }
-
-        if (response.status === 429) {
-          lastError = new Error(
-            `Groq API rate limit hit (429): ${errText.slice(0, 300)}`
-          );
-
-          if (attempt < maxRetries) {
-            await new Promise((resolve) =>
-              setTimeout(resolve, 2000 * (attempt + 1))
-            );
-            continue;
-          }
-
-          throw lastError;
-        }
-
-        if (response.status >= 500) {
-          lastError = new Error(
-            `Groq API server error (${response.status}): ${errText.slice(0, 300)}`
-          );
-
-          if (attempt < maxRetries) {
-            await new Promise((resolve) =>
-              setTimeout(resolve, 2000 * (attempt + 1))
-            );
-            continue;
-          }
-
-          throw lastError;
-        }
-
-        if (response.status === 413) {
-          throw new Error(
-            `Groq API error 413: The request exceeds the model's token limit. ${errText.slice(0, 250)}`
-          );
-        }
-
-        // Client errors such as 400 or 404 are not normally retryable.
-        throw new Error(
-          `Groq API error ${response.status}: ${errText.slice(0, 300)}`
+        const errorText = await response.text().catch(() => "");
+        const error = new Error(
+          `Groq API error ${response.status}: ${
+            errorText.slice(0, 500) || "No details provided."
+          }`
         );
+
+        error.status = response.status;
+
+        if (
+          (response.status === 429 || response.status >= 500) &&
+          attempt < maxRetries
+        ) {
+          lastError = error;
+          await wait(1500 * (attempt + 1));
+          continue;
+        }
+
+        throw error;
       }
 
       const data = await response.json();
+      const content = data?.choices?.[0]?.message?.content;
 
-      if (
-        !data.choices ||
-        !data.choices[0] ||
-        !data.choices[0].message
-      ) {
-        throw new Error(
-          "Groq API returned an unexpected response structure."
-        );
-      }
-
-      const content = data.choices[0].message.content;
-
-      if (!content || typeof content !== "string") {
-        throw new Error("Groq API returned empty content.");
+      if (typeof content !== "string" || !content.trim()) {
+        throw new Error("Groq returned empty or unexpected content.");
       }
 
       try {
         return JSON.parse(content);
       } catch {
-        // Preserve the original behavior: return raw content if JSON parsing fails.
-        return content;
-      }
-    } catch (err) {
-      if (err?.name === "AbortError") {
-        lastError = new Error(
-          `AI request timed out after ${REQUEST_TIMEOUT_MS / 1000} seconds. ` +
-            "The investigation may be retried."
+        throw new Error(
+          "Groq returned invalid JSON. Please try again."
         );
+      }
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        lastError = new Error(
+          "The Groq API request timed out after 60 seconds."
+        );
+      } else {
+        lastError = error;
+      }
 
-        if (attempt < maxRetries) {
-          continue;
-        }
+      const status = lastError?.status;
 
+      if (
+        status &&
+        status !== 429 &&
+        status < 500
+      ) {
         throw lastError;
       }
 
-      // Authentication errors should not be retried.
-      if (err?.message?.includes("authentication failed")) {
-        throw err;
-      }
-
-      // Do not retry other client-side HTTP errors, such as model_not_found.
-      if (
-        err?.message?.startsWith("Groq API error 4") &&
-        !err?.message?.includes("429")
-      ) {
-        throw err;
-      }
-
-      lastError = err;
-
       if (attempt < maxRetries) {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        await wait(1500 * (attempt + 1));
         continue;
       }
 
-      throw err;
-    } finally {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
+      throw lastError;
     }
   }
 
-  throw lastError || new Error("Groq API request failed.");
+  throw lastError || new Error("Groq analysis failed.");
 }

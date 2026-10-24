@@ -1,206 +1,311 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, BrainCircuit, Activity, Beaker, CheckCircle2, ChevronRight, Settings, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  Activity,
+  AlertCircle,
+  Beaker,
+  CheckCircle2,
+  Clock3,
+  Target,
+  Zap,
+} from "lucide-react";
+
+const STORAGE_KEY = "working-ledger-insights";
+
+const PRIORITY_STYLES = {
+  High: "border-red-500/30 bg-red-500/10 text-red-300",
+  Medium: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+  Low: "border-green-500/30 bg-green-500/10 text-green-300",
+};
 
 export default function InsightDetailView() {
-  const { id } = useParams();
+  const params = useParams();
   const router = useRouter();
+
   const [insight, setInsight] = useState(null);
+  const [metadata, setMetadata] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    // For MVP, if it's our mock ID, load mock data. Otherwise in production, fetch from DB.
-    // We will just provide a very rich mock view that fulfills the PRD for demonstration.
-    setInsight({
-      id: id,
-      title: "Follow-up Consistency",
-      type: "PATTERN",
-      status: "ACTIVE",
-      confidence: "HIGH",
-      discovered: "September 2, 2026",
-      description: "Higher follow-up consistency has been associated with stronger meeting performance. When follow-ups are completed at >90% of target, meeting volume reliably increases the following week.",
-      evidence: {
-        inputs: ["Follow-up completion"],
-        period: "8 weeks",
-        observations: "94",
-        averageCompletion: "91%",
-        relatedOutcome: "Meeting volume",
-        comparison: "7 of 9 comparable weeks showed higher meeting volume when follow-up completion was above 90%."
-      },
-      lineage: {
-        observation: "Outreach volume fluctuated wildly in Q1.",
-        hypothesis: "Increasing follow-up consistency will stabilize meeting volume.",
-        experiment: "Test strict adherence to 5 follow-ups per lead for 30 days.",
-        optimization: "Normal Input for Follow-ups changed from 2 to 5.",
-        systemVersion: "v1.3"
-      }
-    });
-  }, [id]);
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
 
-  if (!insight) {
+      if (!raw) {
+        setError(
+          "This insight is not available in the current browser session. Return to the Insights Archive and synthesize the insights again."
+        );
+        return;
+      }
+
+      const saved = JSON.parse(raw);
+      const insightIndex = Number(params.id);
+
+      if (
+        !Number.isInteger(insightIndex) ||
+        insightIndex < 0 ||
+        !Array.isArray(saved.insights) ||
+        !saved.insights[insightIndex]
+      ) {
+        setError(
+          "This insight could not be found. Return to the Insights Archive and generate the insights again."
+        );
+        return;
+      }
+
+      setInsight(saved.insights[insightIndex]);
+      setMetadata({
+        systemName: saved.systemName,
+        generatedAt: saved.generatedAt,
+      });
+    } catch (err) {
+      console.error("Could not load insight details:", err);
+      setError("Unable to read the saved insight in this browser session.");
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id]);
+
+  if (loading) {
     return (
-      <div className="flex h-[calc(100vh-100px)] items-center justify-center">
-        <div className="w-8 h-8 border-4 border-[#B8862E]/30 border-t-[#B8862E] rounded-full animate-spin" />
+      <div className="flex min-h-[50vh] items-center justify-center gap-3 text-gray-500">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-orange-200 border-t-orange-600" />
+        <span className="text-sm">Loading insight...</span>
       </div>
     );
   }
 
-  const getTypeConfig = (type) => {
-    switch (type) {
-      case 'OBSERVATION': return { icon: Activity, color: 'text-gray-400', border: 'border-gray-500/30', bg: 'bg-gray-500/10' };
-      case 'PATTERN': return { icon: BrainCircuit, color: 'text-[#B8862E]', border: 'border-[#B8862E]/30', bg: 'bg-[#B8862E]/10' };
-      case 'HYPOTHESIS': return { icon: Beaker, color: 'text-blue-400', border: 'border-blue-500/30', bg: 'bg-blue-500/10' };
-      case 'VALIDATED': return { icon: CheckCircle2, color: 'text-green-500', border: 'border-green-500/30', bg: 'bg-green-500/10' };
-      default: return { icon: Activity, color: 'text-gray-400', border: 'border-white/10', bg: 'bg-white/5' };
-    }
-  };
+  if (error || !insight) {
+    return (
+      <div className="mx-auto max-w-3xl py-10">
+        <button
+          type="button"
+          onClick={() => router.push("/insights")}
+          className="mb-8 flex items-center gap-2 text-sm font-semibold text-gray-500 transition hover:text-gray-900"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Insights Archive
+        </button>
 
-  const config = getTypeConfig(insight.type);
-  const Icon = config.icon;
-
-  return (
-    <div className="w-full mx-auto pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
-      <button 
-        onClick={() => router.back()}
-        className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors mb-6"
-      >
-        <ArrowLeft className="w-4 h-4" /> Back to Knowledge Library
-      </button>
-
-      {/* Header Panel */}
-      <div className={`bg-[#0A0B0E] border ${config.border} rounded-2xl p-8 mb-8 relative overflow-hidden shadow-2xl`}>
-        <div className={`absolute top-0 right-0 w-64 h-64 ${config.bg} rounded-full blur-3xl -mr-20 -mt-20 opacity-50`} />
-        
-        <div className="relative z-10">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${config.bg} border ${config.border}`}>
-                <Icon className={`w-6 h-6 ${config.color}`} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-xs font-bold uppercase tracking-widest ${config.color}`}>{insight.type}</span>
-                  <span className="w-1 h-1 rounded-full bg-gray-600" />
-                  <span className="text-xs text-gray-400 uppercase tracking-wider">{insight.status}</span>
-                </div>
-                <h1 className="text-3xl font-bold text-white tracking-tight">{insight.title}</h1>
-              </div>
-            </div>
-            
-            <div className="bg-[#1A1C23] border border-white/5 rounded-lg p-3 text-right shrink-0">
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Confidence</div>
-              <div className="text-sm font-bold text-green-400">{insight.confidence}</div>
-            </div>
-          </div>
-          
-          <p className="text-lg text-gray-300 leading-relaxed w-full border-l-2 border-[#B8862E] pl-4">
-            "{insight.description}"
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+          <AlertCircle className="mb-3 h-6 w-6 text-amber-700" />
+          <h1 className="text-xl font-semibold text-gray-900">
+            Insight unavailable
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-gray-700">
+            {error || "The requested insight could not be loaded."}
           </p>
-          
-          <div className="mt-6 text-xs text-gray-500 font-mono">
-            Discovered: {insight.discovered}
-          </div>
+
+          <button
+            type="button"
+            onClick={() => router.push("/insights")}
+            className="mt-5 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-700"
+          >
+            Return to Insights
+          </button>
         </div>
       </div>
+    );
+  }
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        
-        {/* Left Column: Evidence & Data */}
-        <div className="md:col-span-2 space-y-8">
-          
-          <section>
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4">Evidence Base</h2>
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-              <div className="grid grid-cols-2 gap-y-6 gap-x-4 mb-6">
-                <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Source Input</div>
-                  <div className="font-semibold text-gray-900">{insight.evidence.inputs.join(", ")}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Period Analysed</div>
-                  <div className="font-semibold text-gray-900">{insight.evidence.period}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Observations</div>
-                  <div className="font-semibold text-gray-900">{insight.evidence.observations}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Avg Completion</div>
-                  <div className="font-semibold text-[#B8862E]">{insight.evidence.averageCompletion}</div>
-                </div>
+  const priorityStyle =
+    PRIORITY_STYLES[insight.priority] || PRIORITY_STYLES.Medium;
+
+  return (
+    <div className="mx-auto w-full pb-12">
+      <button
+        type="button"
+        onClick={() => router.push("/insights")}
+        className="mb-6 flex items-center gap-2 text-sm font-semibold text-gray-500 transition hover:text-gray-900"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Insights Archive
+      </button>
+
+      <header className="relative mb-8 overflow-hidden rounded-2xl border border-white/10 bg-[#0A0B0E] p-6 shadow-xl sm:p-8">
+        <div className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full bg-orange-600/10 blur-3xl" />
+
+        <div className="relative">
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-300">
+              {insight.category}
+            </span>
+
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${priorityStyle}`}
+            >
+              {insight.priority} Priority
+            </span>
+          </div>
+
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-orange-500/20 bg-orange-500/10">
+              <Zap className="h-6 w-6 text-orange-400" />
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                Insight Detail
+              </p>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                {insight.category}
+              </h1>
+            </div>
+          </div>
+
+          <p className="max-w-3xl text-sm leading-7 text-gray-300">
+            {insight.observed_fact}
+          </p>
+
+          <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-gray-400">
+            {metadata?.systemName && (
+              <span>System: {metadata.systemName}</span>
+            )}
+
+            {metadata?.generatedAt && (
+              <span>
+                Generated:{" "}
+                {new Date(metadata.generatedAt).toLocaleString()}
+              </span>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <DetailSection
+            title="Observed Fact"
+            subtitle="What the available data actually shows"
+            icon={<Activity className="h-5 w-5" />}
+            iconStyle="bg-blue-50 text-blue-700"
+          >
+            <p className="text-sm leading-7 text-gray-800">
+              {insight.observed_fact}
+            </p>
+          </DetailSection>
+
+          <DetailSection
+            title="Supporting Evidence"
+            subtitle="Evidence and data limitations"
+            icon={<CheckCircle2 className="h-5 w-5" />}
+            iconStyle="bg-gray-100 text-gray-700"
+          >
+            <p className="whitespace-pre-wrap text-sm leading-7 text-gray-700">
+              {insight.evidence}
+            </p>
+          </DetailSection>
+
+          <DetailSection
+            title="AI Hypothesis"
+            subtitle="A possible explanation, not a proven cause"
+            icon={<Beaker className="h-5 w-5" />}
+            iconStyle="bg-orange-50 text-orange-700"
+          >
+            <p className="whitespace-pre-wrap text-sm leading-7 text-gray-800">
+              {insight.ai_hypothesis}
+            </p>
+          </DetailSection>
+        </div>
+
+        <aside className="space-y-6">
+          <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
+                <Target className="h-5 w-5" />
               </div>
-              
-              <div className="border-t border-gray-100 pt-6">
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Detailed Comparison</div>
-                <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-100">
-                  {insight.evidence.comparison}
+
+              <div>
+                <h2 className="font-semibold text-emerald-950">
+                  Recommended Action
+                </h2>
+                <p className="mt-0.5 text-xs text-emerald-800">
+                  Your next step
                 </p>
               </div>
             </div>
+
+            <p className="whitespace-pre-wrap text-sm leading-7 text-emerald-950">
+              {insight.recommended_action}
+            </p>
+
+            <div className="mt-5 border-t border-emerald-200 pt-4">
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-emerald-800">
+                Success Metric
+              </h3>
+              <p className="whitespace-pre-wrap text-sm leading-6 text-emerald-950">
+                {insight.success_metric}
+              </p>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-white/70 p-3 text-sm font-medium text-emerald-900">
+              <Clock3 className="h-4 w-4 shrink-0" />
+              Review after {insight.review_after_days} day
+              {insight.review_after_days === 1 ? "" : "s"}
+            </div>
           </section>
 
-        </div>
+          <section className="rounded-2xl border border-gray-200 bg-white p-5">
+            <h2 className="mb-3 text-sm font-semibold text-gray-900">
+              How to interpret this insight
+            </h2>
 
-        {/* Right Column: Lineage / Traceability */}
-        <div>
-          <h2 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4">Insight Lineage</h2>
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 relative">
-            {/* Connection Line */}
-            <div className="absolute left-[39px] top-[40px] bottom-[40px] w-px bg-gray-200" />
-            
-            <div className="space-y-6 relative z-10">
-              
-              <div className="flex gap-4">
-                <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center shrink-0 mt-1">
-                  <Activity className="w-4 h-4 text-gray-500" />
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Observation</h3>
-                  <p className="text-sm text-gray-700">{insight.lineage.observation}</p>
-                </div>
-              </div>
+            <div className="space-y-3 text-sm leading-6 text-gray-600">
+              <p>
+                <span className="font-semibold text-gray-900">
+                  Fact:
+                </span>{" "}
+                supported by the supplied records.
+              </p>
 
-              <div className="flex gap-4">
-                <div className="w-8 h-8 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center shrink-0 mt-1">
-                  <Beaker className="w-4 h-4 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-1">Hypothesis</h3>
-                  <p className="text-sm text-gray-700">{insight.lineage.hypothesis}</p>
-                </div>
-              </div>
+              <p>
+                <span className="font-semibold text-gray-900">
+                  Hypothesis:
+                </span>{" "}
+                a possible explanation that still needs testing.
+              </p>
 
-              <div className="flex gap-4">
-                <div className="w-8 h-8 rounded-full bg-amber-100 border-2 border-white flex items-center justify-center shrink-0 mt-1">
-                  <Search className="w-4 h-4 text-amber-600" />
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-1">Experiment</h3>
-                  <p className="text-sm text-gray-700">{insight.lineage.experiment}</p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <div className="w-8 h-8 rounded-full bg-[#B8862E]/10 border-2 border-white flex items-center justify-center shrink-0 mt-1">
-                  <Settings className="w-4 h-4 text-[#B8862E]" />
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-[#B8862E] uppercase tracking-widest mb-1">Optimization</h3>
-                  <p className="text-sm text-gray-700">{insight.lineage.optimization}</p>
-                  <div className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-gray-900 text-white px-2 py-1 rounded">
-                    System Version {insight.lineage.systemVersion}
-                  </div>
-                </div>
-              </div>
-
+              <p>
+                <span className="font-semibold text-gray-900">
+                  Action:
+                </span>{" "}
+                the proposed next step to test or address the finding.
+              </p>
             </div>
-          </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function DetailSection({
+  title,
+  subtitle,
+  icon,
+  iconStyle,
+  children,
+}) {
+  return (
+    <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="mb-4 flex items-start gap-3">
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconStyle}`}
+        >
+          {icon}
         </div>
 
+        <div>
+          <h2 className="font-semibold text-gray-900">{title}</h2>
+          <p className="mt-1 text-xs text-gray-500">{subtitle}</p>
+        </div>
       </div>
 
-    </div>
+      {children}
+    </section>
   );
 }
