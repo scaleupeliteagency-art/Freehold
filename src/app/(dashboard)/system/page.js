@@ -224,15 +224,22 @@ function QuarterRow({ quarter, quarterTarget, isActive }) {
         )}
       </td>
 
-      {/* target */}
+      {/* target — shown prominently for active quarter */}
       <td className="px-3 py-3.5">
-        <div className="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">Target</div>
-        {quarterTarget != null ? (
-          <div className="font-bold text-gray-900 text-sm">{Number(quarterTarget).toLocaleString()}</div>
+        <div className="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">Quarter Target</div>
+        {isActive && quarterTarget != null ? (
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-bold ${
+            isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-gray-50 text-gray-700 border border-gray-200"
+          }`}>
+            <Target className="w-3 h-3" />
+            {Number(quarterTarget).toLocaleString()}
+          </div>
+        ) : quarterTarget != null ? (
+          <div className="font-bold text-gray-700 text-sm">{Number(quarterTarget).toLocaleString()}</div>
         ) : (
-          <div className="text-xs text-gray-400 italic">See objective</div>
+          <div className="text-xs text-gray-400 italic">—</div>
         )}
-        <div className="text-xs text-gray-400 mt-0.5">{totalRocks} rock{totalRocks !== 1 ? "s" : ""} planned</div>
+        <div className="text-xs text-gray-400 mt-1.5">{totalRocks} rock{totalRocks !== 1 ? "s" : ""} planned</div>
       </td>
 
       {/* status */}
@@ -408,12 +415,13 @@ export default function SystemOverviewPage() {
         const yearlyGoal      = snapshot?.roadmap?.yearlyGoal ?? null;       // { name, target }
         const quarterlyTarget = snapshot?.roadmap?.quarterlyObjective?.target ?? null;
 
-        // 4. Active year plan
+        // 4. Year plan — get the most recent one (do NOT filter by status,
+        //    as it may be 'locked' or another value depending on how it was created)
         const { data: yearPlans } = await supabase
           .from("year_plans")
           .select("*")
           .eq("system_id", activeSys.id)
-          .eq("status", "active")
+          .order("year_number", { ascending: false })
           .limit(1);
 
         if (!yearPlans || yearPlans.length === 0) return;
