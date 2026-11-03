@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase/client";
 import SystemContext from "./components/SystemContext";
 import ExecutionBoard from "./components/ExecutionBoard";
@@ -9,7 +8,7 @@ import InputManagement from "./components/InputManagement";
 import InputEvolution from "./components/InputEvolution";
 import VersionHistoryModal from "./components/VersionHistoryModal";
 import CloseDayModal from "./components/CloseDayModal";
-import { Plus } from "lucide-react";
+import { Plus, CheckCircle2, AlertTriangle, Flame, ShieldCheck, Target, Calendar } from "lucide-react";
 
 const getLocalISODate = (date = new Date()) => {
   const offset = date.getTimezoneOffset() * 60000;
@@ -95,7 +94,6 @@ export default function DailyInputsPage() {
           .eq("id", activeSystem.id);
 
         if (error) throw error;
-
         activeSystem.status = "active";
       }
 
@@ -153,7 +151,7 @@ export default function DailyInputsPage() {
 
       setContext(ctx);
 
-      // Fetch all definitions so inactive core inputs aren't hidden.
+      // Fetch input definitions
       const {
         data: inputDefs,
         error: inputDefsError,
@@ -171,6 +169,7 @@ export default function DailyInputsPage() {
         return;
       }
 
+      // Fetch today's execution entries
       const {
         data: entries,
         error: entriesError,
@@ -185,6 +184,7 @@ export default function DailyInputsPage() {
 
       if (entriesError) throw entriesError;
 
+      // Map definitions with semantically explicit targets
       const formatted = definitions
         .filter(
           (definition) =>
@@ -194,26 +194,51 @@ export default function DailyInputsPage() {
         )
         .map((definition) => {
           const entry = entries?.find(
-            (item) =>
-              item.input_definition_id === definition.id
+            (item) => item.input_definition_id === definition.id
           );
 
           const isCore =
             definition.is_core === true ||
             definition.isCore === true;
 
+          const normalTarget = Number(
+            definition.normal_target ??
+            definition.normalTarget ??
+            definition.target ??
+            1
+          );
+
+          const badDayMinimum = Number(
+            definition.bad_day_minimum ??
+            definition.badDayMinimum ??
+            definition.minimumTarget ??
+            definition.minimum ??
+            (isCore ? Math.max(1, Math.floor(normalTarget * 0.5)) : 0)
+          );
+
+          const stretchTarget = Number(
+            definition.stretch_target ??
+            definition.stretchTarget ??
+            definition.stretch ??
+            (isCore ? Math.round(normalTarget * 1.5) : normalTarget)
+          );
+
           return {
             ...definition,
             isCore,
             is_core: isCore,
-            target: Number(definition.target) || 0,
+            badDayMinimum,
+            normalTarget,
+            stretchTarget,
+            target: normalTarget,
             actual: Number(entry?.actual_value) || 0,
             milestoneName: ctx.currentMilestone,
+            connectedRock: ctx.currentRock,
             status: isCore
               ? "active"
               : definition.active_status
-                ? "active"
-                : "archived",
+              ? "active"
+              : "archived",
           };
         });
 
@@ -230,16 +255,69 @@ export default function DailyInputsPage() {
     fetchData();
   }, [fetchData]);
 
+  // Daily Overview Metrics
+  const overviewMetrics = useMemo(() => {
+    const coreList = inputs.filter((i) => i.isCore);
+    const addlList = inputs.filter((i) => !i.isCore);
+
+    let completedCoreCount = 0;
+    let completedAddlCount = 0;
+    let badDayCoreCount = 0;
+
+    coreList.forEach((inp) => {
+      const act = Number(inp.actual || 0);
+      if (act >= inp.normalTarget && inp.normalTarget > 0) completedCoreCount++;
+      if (act >= inp.badDayMinimum && inp.badDayMinimum > 0) badDayCoreCount++;
+    });
+
+    addlList.forEach((inp) => {
+      const act = Number(inp.actual || 0);
+      if (act >= (inp.target || 1)) completedAddlCount++;
+    });
+
+    let dailyClassification = "Not Started";
+    let classificationBadge = "bg-slate-100 text-slate-700 border-slate-200";
+
+    if (coreList.length >= 3) {
+      if (completedCoreCount === 3) {
+        dailyClassification = "Normal Success";
+        classificationBadge = "bg-emerald-600 text-white border-emerald-700";
+      } else if (badDayCoreCount === 3) {
+        dailyClassification = "Bad-Day Success";
+        classificationBadge = "bg-amber-500 text-white border-amber-600";
+      } else {
+        const hasStarted = coreList.some((i) => Number(i.actual || 0) > 0);
+        dailyClassification = hasStarted ? "In Progress" : "Not Started";
+        classificationBadge = hasStarted
+          ? "bg-amber-50 text-amber-800 border-amber-200"
+          : "bg-slate-100 text-slate-700 border-slate-200";
+      }
+    }
+
+    // Normal performance progress
+    const totalNormalTarget = coreList.reduce((acc, i) => acc + (i.normalTarget || 0), 0);
+    const totalNormalActual = coreList.reduce((acc, i) => acc + Math.min(i.normalTarget || 0, Number(i.actual || 0)), 0);
+    const normalProgressPct = totalNormalTarget > 0 ? Math.round((totalNormalActual / totalNormalTarget) * 100) : 0;
+
+    return {
+      coreList,
+      addlList,
+      completedCoreCount,
+      completedAddlCount,
+      dailyClassification,
+      classificationBadge,
+      normalProgressPct,
+    };
+  }, [inputs]);
+
   const handleUpdateExecution = async (id, newValue) => {
     const input = inputs.find((item) => item.id === id);
-
     if (!input) {
       alert("Input not found.");
       return;
     }
 
     const numericValue = Number(newValue);
-
     if (!Number.isFinite(numericValue) || numericValue < 0) {
       alert("Enter a valid non-negative number.");
       return;
@@ -247,11 +325,9 @@ export default function DailyInputsPage() {
 
     const previousValue = input.actual;
 
-    setInputs((previous) =>
-      previous.map((item) =>
-        item.id === id
-          ? { ...item, actual: numericValue }
-          : item
+    setInputs((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, actual: numericValue } : item
       )
     );
 
@@ -294,15 +370,11 @@ export default function DailyInputsPage() {
       }
     } catch (error) {
       console.error("Error saving execution:", error);
-
-      setInputs((previous) =>
-        previous.map((item) =>
-          item.id === id
-            ? { ...item, actual: previousValue }
-            : item
+      setInputs((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, actual: previousValue } : item
         )
       );
-
       alert("Could not save execution: " + error.message);
     }
   };
@@ -322,16 +394,12 @@ export default function DailyInputsPage() {
         inputBeingEdited?.isCore === true ||
         inputBeingEdited?.is_core === true;
 
-      // Core inputs cannot be paused or deactivated.
       if (inputBeingEdited && isStateChange && isCore) {
-        alert(
-          "Core inputs are permanent and cannot be paused, archived, or deactivated."
-        );
+        alert("Core inputs are permanent and cannot be paused or archived.");
         return;
       }
 
       if (inputBeingEdited && isStateChange) {
-        // State changes are only allowed for additional inputs.
         const { data, error } = await supabase
           .from("input_definitions")
           .update({
@@ -343,37 +411,32 @@ export default function DailyInputsPage() {
           .select("id");
 
         if (error) throw error;
-
-        if (!data?.length) {
-          alert(
-            "The input was not changed. It may be a core input or may no longer exist."
-          );
-          return;
-        }
       } else if (inputBeingEdited) {
-        // Edit the existing record instead of replacing it.
+        // Target correction / update
         const updates = {
           name: formData.name,
           target: Number(formData.target),
           unit: formData.unit,
           frequency: formData.frequency,
+          description: formData.description,
+          change_reason: formData.change_reason || formData.correctionReason,
         };
 
-        let query = supabase
+        if (isCore) {
+          updates.bad_day_minimum = Number(formData.badDayMinimum);
+          updates.normal_target = Number(formData.normalTarget);
+          updates.stretch_target = Number(formData.stretchTarget);
+        }
+
+        const { error } = await supabase
           .from("input_definitions")
           .update(updates)
           .eq("id", inputBeingEdited.id)
           .eq("system_id", system.id);
 
-        if (isCore) {
-          query = query.eq("is_core", true);
-        }
-
-        const { error } = await query;
-
         if (error) throw error;
       } else {
-        // New inputs are always additional inputs, never core inputs.
+        // Additional input creation
         const { error } = await supabase
           .from("input_definitions")
           .insert({
@@ -385,6 +448,7 @@ export default function DailyInputsPage() {
             weekly_milestone_id: context?.milestoneId || null,
             active_status: true,
             is_core: false,
+            description: formData.description || "",
           });
 
         if (error) throw error;
@@ -392,7 +456,6 @@ export default function DailyInputsPage() {
 
       setIsManageOpen(false);
       setEditingInput(null);
-
       await fetchData();
     } catch (error) {
       console.error("Error saving input:", error);
@@ -408,14 +471,13 @@ export default function DailyInputsPage() {
 
   const calculateScore = () => {
     if (!inputs.length) return 0;
-
     let totalWeight = 0;
     let earnedWeight = 0;
 
     inputs.forEach((input) => {
       const weight = Number(input.weight) || 10;
-      const target = Number(input.target) || 1;
-      const actual = Number(input.actual) || 0;
+      const target = Number(input.normalTarget || input.target || 1);
+      const actual = Number(input.actual || 0);
 
       totalWeight += weight;
       earnedWeight += Math.min(1, actual / target) * weight;
@@ -430,7 +492,7 @@ export default function DailyInputsPage() {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <div className="text-sm font-medium animate-pulse text-orange-500">
-          Loading Dashboard...
+          Loading Execution Dashboard...
         </div>
       </div>
     );
@@ -442,7 +504,6 @@ export default function DailyInputsPage() {
         <h2 className="text-2xl font-semibold text-slate-900 mb-4">
           No Active System
         </h2>
-        <hr className="border-slate-200 mb-8" />
         <p className="text-slate-600 max-w-md">
           You need an active system to track daily inputs.
         </p>
@@ -450,69 +511,109 @@ export default function DailyInputsPage() {
     );
   }
 
-  if (system.status === "scheduled") {
-    return (
-      <div className="w-full py-12 animate-in fade-in duration-500">
-        <div className="mb-10 bg-orange-50 border border-orange-100 rounded-2xl p-8">
-          <div className="text-xs font-semibold uppercase tracking-wider text-orange-600 mb-2">
-            System Scheduled
-          </div>
-
-          <h2 className="text-2xl font-semibold mb-2 text-slate-900">
-            Awaiting Start Date
-          </h2>
-
-          <p className="text-sm text-slate-600 max-w-xl leading-relaxed mb-6">
-            Your system is scheduled to start on{" "}
-            <strong>
-              {new Date(system.start_date).toLocaleDateString("en-GB", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </strong>
-            . Daily inputs will be unlocked on that day.
-          </p>
-
-          <SystemContext context={context} />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full animate-in fade-in duration-500 pb-24">
-      <div className="mb-10 flex justify-between items-end">
-        <div>
-          <h1 className="text-3xl font-semibold text-slate-900 mb-2">
-            Daily Inputs
-          </h1>
+      {/* DAILY OVERVIEW BANNER */}
+      <div className="mb-8 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 sm:p-8 shadow-md border border-slate-700">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-700/70">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-orange-400 uppercase tracking-wider mb-1">
+              <Calendar className="h-3.5 w-3.5" />
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              Execution Control Center
+            </h1>
+            <p className="text-xs text-slate-300 mt-1">
+              Track daily non-negotiables, fulfill expected performance targets, and close your ledger.
+            </p>
+          </div>
 
-          <p className="text-sm font-medium text-slate-500">
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </p>
-
-          <p className="text-sm text-slate-500 mt-2">
-            The actions you repeatedly perform to move your system forward.
-          </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setEditingInput(null);
+                setIsManageOpen(true);
+              }}
+              className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-orange-700 transition-colors shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              Add Supporting Input
+            </button>
+          </div>
         </div>
 
-        <button
-          onClick={() => {
-            setEditingInput(null);
-            setIsManageOpen(true);
-          }}
-          className="flex items-center gap-2 bg-orange-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Add Input
-        </button>
+        {/* 4 Metric Badges in Header */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+              Core Commitments
+            </span>
+            <div className="text-xl font-black text-white">
+              {overviewMetrics.completedCoreCount} / 3
+              <span className="text-xs font-normal text-slate-400 ml-1">Normal Met</span>
+            </div>
+            <div className="w-full bg-slate-700 h-1 rounded-full mt-2 overflow-hidden">
+              <div
+                className="bg-orange-500 h-full rounded-full transition-all"
+                style={{ width: `${(overviewMetrics.completedCoreCount / 3) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+              Additional Inputs
+            </span>
+            <div className="text-xl font-black text-white">
+              {overviewMetrics.completedAddlCount} / {overviewMetrics.addlList.length}
+              <span className="text-xs font-normal text-slate-400 ml-1">Complete</span>
+            </div>
+            <div className="w-full bg-slate-700 h-1 rounded-full mt-2 overflow-hidden">
+              <div
+                className="bg-blue-400 h-full rounded-full transition-all"
+                style={{
+                  width: `${
+                    overviewMetrics.addlList.length > 0
+                      ? (overviewMetrics.completedAddlCount / overviewMetrics.addlList.length) * 100
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+              Daily Classification
+            </span>
+            <div className="mt-1">
+              <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-extrabold border ${overviewMetrics.classificationBadge}`}>
+                {overviewMetrics.dailyClassification}
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+              Normal Target Velocity
+            </span>
+            <div className="text-xl font-black text-white">
+              {overviewMetrics.normalProgressPct}%
+            </div>
+            <div className="w-full bg-slate-700 h-1 rounded-full mt-2 overflow-hidden">
+              <div
+                className="bg-emerald-500 h-full rounded-full transition-all"
+                style={{ width: `${overviewMetrics.normalProgressPct}%` }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <SystemContext context={context} />
@@ -527,20 +628,23 @@ export default function DailyInputsPage() {
         onViewHistory={handleViewHistory}
       />
 
-      <InputEvolution
-        inputs={inputs}
-        onEdit={(input) => {
-          setEditingInput(input);
-          setIsManageOpen(true);
-        }}
-      />
+      <div className="mt-12">
+        <InputEvolution
+          inputs={inputs}
+          onEdit={(input) => {
+            setEditingInput(input);
+            setIsManageOpen(true);
+          }}
+        />
+      </div>
 
-      <div className="mt-16 text-center border-t border-slate-200 pt-10">
+      {/* Floating / Prominent Close Day Action */}
+      <div className="mt-14 text-center border-t border-slate-200 pt-8">
         <button
           onClick={() => setIsCloseDayOpen(true)}
-          className="bg-orange-600 text-white px-12 py-4 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors shadow-sm"
+          className="bg-orange-600 hover:bg-orange-700 text-white px-10 py-4 rounded-xl text-sm font-bold shadow-md transition-all hover:shadow-lg active:scale-98"
         >
-          Close Day
+          Review & Close Day to Ledger
         </button>
       </div>
 
@@ -563,15 +667,12 @@ export default function DailyInputsPage() {
         isOpen={isCloseDayOpen}
         onClose={() => setIsCloseDayOpen(false)}
         score={calculateScore()}
-        completedInputs={
-          inputs.filter(
-            (input) =>
-              Number(input.actual) / (Number(input.target) || 1) >= 1
-          ).length
-        }
-        totalInputs={inputs.length}
+        completedInputs={overviewMetrics.completedCoreCount}
+        totalInputs={overviewMetrics.coreList.length}
+        inputs={inputs}
         onConfirm={() => {
           setIsCloseDayOpen(false);
+          fetchData();
         }}
       />
     </div>

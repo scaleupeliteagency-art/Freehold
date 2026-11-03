@@ -1,13 +1,13 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
 import {
-  Plus,
   X,
   LockKeyhole,
-  ShieldCheck,
+  ShieldAlert,
+  Target,
   AlertTriangle,
+  Info,
 } from "lucide-react";
 
 export default function InputManagement({
@@ -17,58 +17,70 @@ export default function InputManagement({
   onSave,
   context,
 }) {
-  const isCore = editingInput?.isCore === true;
+  const isCore = editingInput?.isCore === true || editingInput?.is_core === true;
 
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    type: "numeric",
+    measurementType: "numeric",
     target: "",
-    minimumTarget: "",
+    badDayMinimum: "",
     normalTarget: "",
     stretchTarget: "",
     unit: "",
     frequency: "DAILY",
     weight: 10,
-    change_reason: "",
+    correctionReason: "",
   });
 
   useEffect(() => {
     if (editingInput) {
       const normal =
         editingInput.normalTarget ??
+        editingInput.normal_target ??
         editingInput.normal ??
         editingInput.target ??
+        "";
+
+      const badDay =
+        editingInput.badDayMinimum ??
+        editingInput.bad_day_minimum ??
+        editingInput.minimumTarget ??
+        editingInput.minimum ??
+        "";
+
+      const stretch =
+        editingInput.stretchTarget ??
+        editingInput.stretch_target ??
+        editingInput.stretch ??
         "";
 
       setFormData({
         name: editingInput.name || "",
         description: editingInput.description || "",
-        type: editingInput.type || "numeric",
+        measurementType: editingInput.measurementType || editingInput.measurement_type || "numeric",
         target: editingInput.target ?? normal,
-        minimumTarget:
-          editingInput.minimumTarget ?? editingInput.minimum ?? "",
+        badDayMinimum: badDay,
         normalTarget: normal,
-        stretchTarget:
-          editingInput.stretchTarget ?? editingInput.stretch ?? "",
+        stretchTarget: stretch,
         unit: editingInput.unit || "",
         frequency: (editingInput.frequency || "DAILY").toUpperCase(),
         weight: editingInput.weight ?? 10,
-        change_reason: "",
+        correctionReason: "",
       });
     } else {
       setFormData({
         name: "",
         description: "",
-        type: "numeric",
+        measurementType: "numeric",
         target: "",
-        minimumTarget: "",
+        badDayMinimum: "",
         normalTarget: "",
         stretchTarget: "",
         unit: "",
         frequency: "DAILY",
         weight: 10,
-        change_reason: "",
+        correctionReason: "",
       });
     }
   }, [editingInput, isOpen]);
@@ -86,28 +98,33 @@ export default function InputManagement({
     event.preventDefault();
 
     const name = formData.name.trim();
-
     if (!name) return;
 
     if (isCore) {
-      const minimum = Number(formData.minimumTarget);
-      const normal = Number(formData.normalTarget || formData.target);
+      // Core Input Validation
+      const badDay = Number(formData.badDayMinimum);
+      const normal = Number(formData.normalTarget);
       const stretch = Number(formData.stretchTarget);
 
       if (
-        formData.minimumTarget === "" ||
+        formData.badDayMinimum === "" ||
         formData.normalTarget === "" ||
         formData.stretchTarget === "" ||
-        !Number.isFinite(minimum) ||
+        !Number.isFinite(badDay) ||
         !Number.isFinite(normal) ||
         !Number.isFinite(stretch) ||
-        minimum < 0 ||
-        normal < minimum ||
+        badDay < 0 ||
+        normal < badDay ||
         stretch < normal
       ) {
         alert(
-          "Enter valid targets with minimum ≤ normal ≤ stretch."
+          "Enter valid targets with Bad-Day Minimum ≤ Normal Target ≤ Stretch Target."
         );
+        return;
+      }
+
+      if (!formData.correctionReason) {
+        alert("An auditable correction reason is required when adjusting active core input targets.");
         return;
       }
 
@@ -116,20 +133,24 @@ export default function InputManagement({
           ...formData,
           name,
           isCore: true,
+          is_core: true,
           target: normal,
-          minimumTarget: minimum,
+          badDayMinimum: badDay,
+          bad_day_minimum: badDay,
           normalTarget: normal,
+          normal_target: normal,
           stretchTarget: stretch,
-          weight: Number(formData.weight) || 0,
-          frequency: formData.frequency,
+          stretch_target: stretch,
+          frequency: "DAILY",
+          change_reason: formData.correctionReason,
         },
         editingInput,
         false
       );
-
       return;
     }
 
+    // Additional Input Validation
     if (
       formData.target === "" ||
       !Number.isFinite(Number(formData.target)) ||
@@ -139,19 +160,15 @@ export default function InputManagement({
       return;
     }
 
-    if (editingInput && !formData.change_reason) {
-      alert("Select a reason for changing this input.");
-      return;
-    }
-
     onSave(
       {
         ...formData,
         name,
         target: Number(formData.target),
-        weight: Number(formData.weight) || 0,
         isCore: false,
+        is_core: false,
         frequency: formData.frequency,
+        change_reason: formData.correctionReason,
       },
       editingInput,
       false
@@ -161,7 +178,7 @@ export default function InputManagement({
   const handleStatusAction = (status) => {
     if (isCore) {
       alert(
-        "Core inputs are permanent and cannot be archived, paused, or replaced. You can still edit their targets."
+        "Core inputs are permanent non-negotiables and cannot be paused, archived, or deactivated."
       );
       return;
     }
@@ -171,339 +188,241 @@ export default function InputManagement({
         ...formData,
         status,
         isCore: false,
+        is_core: false,
       },
       editingInput,
       true
     );
   };
 
-  const fieldClass =
-    "w-full rounded-xl border border-slate-200 bg-white p-3 text-sm shadow-sm transition-all focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20";
-
-  const labelClass =
-    "mb-1.5 block text-sm font-medium text-slate-700";
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-orange-600/40 p-4 backdrop-blur-sm">
-      <div className="relative my-8 w-full max-w-2xl rounded-2xl border border-slate-100 bg-white/95 p-6 shadow-xl backdrop-blur-xl sm:p-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-xs">
+      <div className="relative my-8 w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-8">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-6 top-6 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600"
-          aria-label="Close input management"
+          className="absolute right-5 top-5 rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+          aria-label="Close"
         >
           <X className="h-5 w-5" />
         </button>
 
         {/* Header */}
-        <div className="mb-8 pr-10">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl font-semibold text-slate-900">
-              {editingInput
-                ? isCore
-                  ? "Edit Core Input"
-                  : "Evolve Input"
-                : "Add New Input"}
-            </h2>
-
-            {isCore && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-800">
-                <LockKeyhole className="h-3.5 w-3.5" />
-                Permanent Core
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-1.5">
+            {isCore ? (
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-bold text-orange-900">
+                <LockKeyhole className="h-3.5 w-3.5 text-orange-600" />
+                Authorized Core Correction
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                {editingInput ? "Edit Additional Input" : "Create Supporting Input"}
               </span>
             )}
           </div>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-xl font-bold text-slate-900">
             {isCore
-              ? "Adjust the input and its targets without removing its permanent core status."
-              : "Translate strategy into operational behavior."}
+              ? `Correct Targets: ${editingInput.name}`
+              : editingInput
+              ? `Edit Input: ${editingInput.name}`
+              : "New Supporting Input"}
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
+            {isCore
+              ? "Core inputs are permanent. All target adjustments are logged to the version audit ledger."
+              : "Configure secondary operational routines that support your monthly milestones."}
           </p>
         </div>
 
-        {/* Core protection notice */}
-        {isCore && (
-          <div className="mb-6 flex gap-3 rounded-xl border border-orange-200 bg-orange-50 p-4">
-            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-700" />
-
-            <div>
-              <p className="text-sm font-semibold text-orange-900">
-                This input is protected
-              </p>
-              <p className="mt-1 text-sm text-orange-800">
-                You can edit its name, description, frequency, measurement
-                type, weight, and targets. Its core designation cannot be
-                removed, and it cannot be archived or paused.
-              </p>
-            </div>
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            {/* Name */}
-            <div className="md:col-span-2">
-              <label className={labelClass}>Input Name</label>
-              <input
-                required
-                type="text"
-                value={formData.name}
-                onChange={(event) =>
-                  updateField("name", event.target.value)
-                }
-                className={fieldClass}
-                placeholder="e.g. Cold Calls"
-              />
-            </div>
-
-            {/* Description */}
-            <div className="md:col-span-2">
-              <label className={labelClass}>Description</label>
-              <input
-                type="text"
-                value={formData.description}
-                onChange={(event) =>
-                  updateField("description", event.target.value)
-                }
-                className={fieldClass}
-                placeholder="What exactly does this entail?"
-              />
-            </div>
-
-            {/* Measurement Type */}
-            <div>
-              <label className={labelClass}>Measurement Type</label>
-              <select
-                value={formData.type}
-                onChange={(event) =>
-                  updateField("type", event.target.value)
-                }
-                className={fieldClass}
-              >
-                <option value="numeric">Numeric (Count)</option>
-                <option value="duration">Duration (Time)</option>
-                <option value="binary">Binary (Done/Not Done)</option>
-                <option value="percentage">Percentage (%)</option>
-                <option value="currency">Currency</option>
-                <option value="quantity">Quantity</option>
-              </select>
-            </div>
-
-            {/* Frequency */}
-            <div>
-              <label className={labelClass}>Frequency</label>
-              <select
-                value={formData.frequency}
-                onChange={(event) =>
-                  updateField("frequency", event.target.value)
-                }
-                className={fieldClass}
-              >
-                <option value="DAILY">Daily</option>
-                <option value="WEEKLY">Weekly</option>
-                <option value="MONTHLY">Monthly</option>
-              </select>
-            </div>
-
-            {/* Core target settings */}
-            {isCore ? (
-              <>
-                <div className="md:col-span-2">
-                  <div className="flex items-center gap-2">
-                    <TargetIcon />
-                    <h3 className="text-sm font-semibold text-slate-900">
-                      Core Input Targets
-                    </h3>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Minimum is the floor. Normal is the expected target.
-                    Stretch is the ambitious target.
-                  </p>
-                </div>
-
-                <div>
-                  <label className={labelClass}>Minimum Target</label>
-                  <input
-                    required
-                    min="0"
-                    type="number"
-                    value={formData.minimumTarget}
-                    onChange={(event) =>
-                      updateField("minimumTarget", event.target.value)
-                    }
-                    className={fieldClass}
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>Normal Target</label>
-                  <input
-                    required
-                    min="0"
-                    type="number"
-                    value={formData.normalTarget}
-                    onChange={(event) => {
-                      updateField("normalTarget", event.target.value);
-                      updateField("target", event.target.value);
-                    }}
-                    className={fieldClass}
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>Stretch Target</label>
-                  <input
-                    required
-                    min="0"
-                    type="number"
-                    value={formData.stretchTarget}
-                    onChange={(event) =>
-                      updateField("stretchTarget", event.target.value)
-                    }
-                    className={fieldClass}
-                  />
-                </div>
-              </>
-            ) : (
-              <div>
-                <label className={labelClass}>Target per Frequency</label>
-                <input
-                  required
-                  min="0"
-                  type="number"
-                  value={formData.target}
-                  onChange={(event) =>
-                    updateField("target", event.target.value)
-                  }
-                  className={fieldClass}
-                  placeholder="e.g. 20"
-                />
-              </div>
+          {/* Input Name */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+              Input Name
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => updateField("name", e.target.value)}
+              disabled={isCore}
+              placeholder="e.g. Sales Calls, Deep Work, Training"
+              className={`w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm bg-white text-slate-900 outline-none focus:ring-2 focus:ring-orange-500 ${
+                isCore ? "bg-slate-100 text-slate-600 cursor-not-allowed" : ""
+              }`}
+            />
+            {isCore && (
+              <span className="text-[11px] text-slate-400 mt-1 block">
+                Core input name is locked to protect historical integrity.
+              </span>
             )}
+          </div>
 
-            {/* Unit */}
+          {/* Description */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+              Operational Protocol / Description
+            </label>
+            <input
+              type="text"
+              value={formData.description}
+              onChange={(e) => updateField("description", e.target.value)}
+              placeholder="e.g. Zero distraction environment, phone locked in drawer"
+              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm bg-white text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+
+          {/* Unit & Frequency */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Unit</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                Measurement Unit
+              </label>
               <input
                 type="text"
                 value={formData.unit}
-                onChange={(event) =>
-                  updateField("unit", event.target.value)
-                }
-                className={fieldClass}
-                placeholder="e.g. calls, min, %"
+                onChange={(e) => updateField("unit", e.target.value)}
+                placeholder="e.g. calls, minutes, words"
+                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm bg-white text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
 
-            {/* Weight */}
-            <div className="md:col-span-2">
-              <label className={labelClass}>Weight (%)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={formData.weight}
-                onChange={(event) =>
-                  updateField("weight", event.target.value)
-                }
-                className={fieldClass}
-                placeholder="10"
-              />
-              <p className="mt-1.5 text-xs text-slate-500">
-                Determines how much this input contributes to the daily
-                execution score.
-              </p>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                Frequency
+              </label>
+              <select
+                value={formData.frequency}
+                onChange={(e) => updateField("frequency", e.target.value)}
+                disabled={isCore}
+                className={`w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm bg-white text-slate-900 outline-none focus:ring-2 focus:ring-orange-500 ${
+                  isCore ? "bg-slate-100 text-slate-600 cursor-not-allowed" : ""
+                }`}
+              >
+                <option value="DAILY">Daily</option>
+                {!isCore && <option value="WEEKLY">Weekly</option>}
+                {!isCore && <option value="MONTHLY">Monthly</option>}
+              </select>
+              {isCore && (
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  Core inputs are permanently daily.
+                </span>
+              )}
             </div>
-
-            {/* Change reason */}
-            {editingInput && (
-              <div className="mt-2 rounded-xl border border-orange-100 bg-orange-50 p-5 md:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-orange-800">
-                  Reason for Changing
-                </label>
-
-                <p className="mb-3 text-sm text-orange-700/80">
-                  {isCore
-                    ? "Record why this permanent core input is changing. Its identity and history should remain traceable."
-                    : "You are modifying an active input. Your application should preserve its version history."}
-                </p>
-
-                <select
-                  required
-                  value={formData.change_reason}
-                  onChange={(event) =>
-                    updateField("change_reason", event.target.value)
-                  }
-                  className="w-full rounded-xl border border-orange-200 bg-white p-3 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
-                >
-                  <option value="" disabled>
-                    Select a reason...
-                  </option>
-                  <option value="Target was too easy">
-                    Target was too easy
-                  </option>
-                  <option value="Target was unrealistic">
-                    Target was unrealistic
-                  </option>
-                  <option value="Strategy changed">
-                    Strategy changed
-                  </option>
-                  <option value="Circumstances changed">
-                    Circumstances changed
-                  </option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-            )}
           </div>
 
-          {/* Footer */}
-          <div className="mt-6 flex flex-col justify-between gap-4 border-t border-slate-100 pt-6 md:flex-row">
-            {editingInput && !isCore ? (
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleStatusAction("archived")}
-                  className="rounded-lg bg-red-50 px-5 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-100"
-                >
-                  Archive
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleStatusAction("paused")}
-                  className="rounded-lg bg-orange-50 px-5 py-2.5 text-sm font-medium text-orange-600 transition-colors hover:bg-orange-100"
-                >
-                  Pause
-                </button>
+          {/* Core Targets (Bad-Day Minimum, Normal Target, Stretch Target) */}
+          {isCore ? (
+            <div className="rounded-xl border border-orange-200 bg-orange-50/50 p-4 space-y-3">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-orange-900 uppercase tracking-wider">
+                <Target className="h-4 w-4 text-orange-600" />
+                Authorized Target Hierarchy
               </div>
-            ) : isCore ? (
-              <div className="flex items-center gap-2 text-xs text-orange-800">
-                <LockKeyhole className="h-4 w-4" />
-                Archive and pause disabled
-              </div>
-            ) : (
-              <div />
-            )}
 
-            <div className="flex gap-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-white p-3 rounded-xl border border-amber-200">
+                  <label className="block text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-1">
+                    1. Bad-Day Min
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={formData.badDayMinimum}
+                    onChange={(e) => updateField("badDayMinimum", e.target.value)}
+                    className="w-full font-bold text-slate-900 border border-slate-200 rounded px-2 py-1 text-sm outline-none focus:border-amber-500"
+                  />
+                  <span className="text-[9px] text-slate-400 block mt-1">Daily floor</span>
+                </div>
+
+                <div className="bg-white p-3 rounded-xl border border-emerald-200">
+                  <label className="block text-[10px] font-bold text-emerald-800 uppercase tracking-wider mb-1">
+                    2. Normal Target
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={formData.normalTarget}
+                    onChange={(e) => updateField("normalTarget", e.target.value)}
+                    className="w-full font-bold text-slate-900 border border-slate-200 rounded px-2 py-1 text-sm outline-none focus:border-emerald-500"
+                  />
+                  <span className="text-[9px] text-slate-400 block mt-1">Expected</span>
+                </div>
+
+                <div className="bg-white p-3 rounded-xl border border-orange-200">
+                  <label className="block text-[10px] font-bold text-orange-800 uppercase tracking-wider mb-1">
+                    3. Stretch Target
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={formData.stretchTarget}
+                    onChange={(e) => updateField("stretchTarget", e.target.value)}
+                    className="w-full font-bold text-slate-900 border border-slate-200 rounded px-2 py-1 text-sm outline-none focus:border-orange-500"
+                  />
+                  <span className="text-[9px] text-slate-400 block mt-1">Peak</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                Target Value
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={formData.target}
+                onChange={(e) => updateField("target", e.target.value)}
+                placeholder="e.g. 5"
+                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm bg-white text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+          )}
+
+          {/* Auditable Reason for Adjustment */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+              {isCore ? "Auditable Reason for Target Correction (Required)" : "Change Reason (Optional)"}
+            </label>
+            <select
+              value={formData.correctionReason}
+              onChange={(e) => updateField("correctionReason", e.target.value)}
+              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm bg-white text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="">Select reason...</option>
+              <option value="Calibration based on 14-day execution baseline">Calibration based on 14-day execution baseline</option>
+              <option value="Operational capacity expansion (Upward stretch)">Operational capacity expansion (Upward stretch)</option>
+              <option value="Temporary physical recovery or external constraint">Temporary physical recovery or external constraint</option>
+              <option value="Quarterly milestone re-alignment">Quarterly milestone re-alignment</option>
+            </select>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+            {!isCore && editingInput ? (
+              <button
+                type="button"
+                onClick={() => handleStatusAction(editingInput.status === "active" ? "paused" : "active")}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+              >
+                {editingInput.status === "active" ? "Pause Input" : "Resume Input"}
+              </button>
+            ) : <div />}
+
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg px-5 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
               >
                 Cancel
               </button>
-
               <button
                 type="submit"
-                className="rounded-lg bg-orange-600 px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-orange-700"
+                className="px-6 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold shadow-sm transition-all"
               >
-                {editingInput
-                  ? isCore
-                    ? "Save Core Input"
-                    : "Evolve Input"
-                  : "Add Input"}
+                {isCore ? "Save Authorized Correction" : editingInput ? "Save Changes" : "Create Input"}
               </button>
             </div>
           </div>
@@ -511,8 +430,4 @@ export default function InputManagement({
       </div>
     </div>
   );
-}
-
-function TargetIcon() {
-  return <AlertTriangle className="h-4 w-4 text-orange-600" />;
 }

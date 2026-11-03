@@ -1,261 +1,348 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import useReviewEngineStore from "@/lib/store/useReviewEngineStore";
 import { useRouter } from "next/navigation";
+import { calculateReviewPeriods, getStandardPeriodBounds } from "@/lib/reviewScheduler";
+import {
+  Calendar,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  Play,
+  RotateCcw,
+  Sparkles,
+  Layers,
+  ChevronRight,
+  Shield,
+  ArrowRight,
+} from "lucide-react";
 
 export default function ReviewCenter() {
   const [loading, setLoading] = useState(true);
+  const [allSystems, setAllSystems] = useState([]);
+  const [selectedSystemId, setSelectedSystemId] = useState("");
+  const [selectedSystem, setSelectedSystem] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [dueReviews, setDueReviews] = useState([]);
-  const [activeSystem, setActiveSystem] = useState(null);
   const router = useRouter();
-  const initReview = useReviewEngineStore(state => state.initReview);
+  const initReview = useReviewEngineStore((state) => state.initReview);
 
-  const calculateDueReviews = (system, existingReviews) => {
-    if (!system.start_date) return [];
-    const startDate = new Date(system.start_date);
-    const now = new Date();
-    startDate.setHours(0,0,0,0);
-    const due = [];
-    
-    const daysDiff = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    const weeksElapsed = Math.floor(daysDiff / 7);
-    for (let i = 0; i < weeksElapsed; i++) {
-      const pStart = new Date(startDate.getTime() + (i * 7 * 24 * 60 * 60 * 1000));
-      const pEnd = new Date(startDate.getTime() + ((i + 1) * 7 * 24 * 60 * 60 * 1000) - 1);
-      const periodStart = pStart.toISOString().split("T")[0];
-      const periodEnd = pEnd.toISOString().split("T")[0];
-      if (!existingReviews.some(r => r.type === "WEEKLY" && r.period_start === periodStart)) {
-        due.push({ id: `due_weekly_${i}`, type: "WEEKLY", period_start: periodStart, period_end: periodEnd, status: "DUE" });
-      }
-    }
-
-    const monthsElapsed = (now.getFullYear() - startDate.getFullYear()) * 12 + now.getMonth() - startDate.getMonth();
-    for (let i = 0; i < monthsElapsed; i++) {
-      const pStart = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
-      const pEnd = new Date(startDate.getFullYear(), startDate.getMonth() + i + 1, 0);
-      const periodStart = pStart.toISOString().split("T")[0];
-      const periodEnd = pEnd.toISOString().split("T")[0];
-      if (!existingReviews.some(r => r.type === "MONTHLY" && r.period_start === periodStart)) {
-        due.push({ id: `due_monthly_${i}`, type: "MONTHLY", period_start: periodStart, period_end: periodEnd, status: "DUE" });
-      }
-    }
-
-    const quartersElapsed = Math.floor(monthsElapsed / 3);
-    for (let i = 0; i < quartersElapsed; i++) {
-      const pStart = new Date(startDate.getFullYear(), startDate.getMonth() + (i * 3), 1);
-      const pEnd = new Date(startDate.getFullYear(), startDate.getMonth() + (i * 3) + 3, 0);
-      const periodStart = pStart.toISOString().split("T")[0];
-      const periodEnd = pEnd.toISOString().split("T")[0];
-      if (!existingReviews.some(r => r.type === "QUARTERLY" && r.period_start === periodStart)) {
-        due.push({ id: `due_quarterly_${i}`, type: "QUARTERLY", period_start: periodStart, period_end: periodEnd, status: "DUE" });
-      }
-    }
-
-    const yearsElapsed = now.getFullYear() - startDate.getFullYear();
-    for (let i = 0; i < yearsElapsed; i++) {
-      const pStart = new Date(startDate.getFullYear() + i, startDate.getMonth(), startDate.getDate());
-      const pEnd = new Date(startDate.getFullYear() + i + 1, startDate.getMonth(), startDate.getDate() - 1);
-      const periodStart = pStart.toISOString().split("T")[0];
-      const periodEnd = pEnd.toISOString().split("T")[0];
-      if (!existingReviews.some(r => r.type === "YEARLY" && r.period_start === periodStart)) {
-        due.push({ id: `due_yearly_${i}`, type: "YEARLY", period_start: periodStart, period_end: periodEnd, status: "DUE" });
-      }
-    }
-
-    return due.reverse();
-  };
-
+  // 1. Fetch available systems belonging to this user
   useEffect(() => {
-    async function fetchReviews() {
+    async function fetchSystems() {
       try {
-        const { data: systems } = await supabase
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+
+        const { data: systems, error: sysErr } = await supabase
           .from("systems")
-          .select("id, name, start_date")
-          .eq("status", "active")
-          .limit(1);
+          .select("id, name, status, start_date, expiration_date, deadline, is_frozen, why")
+          .order("created_at", { ascending: false });
+
+        if (sysErr) throw sysErr;
 
         if (systems && systems.length > 0) {
-          setActiveSystem(systems[0]);
-          
-          const { data: history } = await supabase
-            .from("reviews")
-            .select("*")
-            .eq("system_id", systems[0].id)
-            .order("created_at", { ascending: false });
-            
-          if (history) {
-              setReviews(history);
-              setDueReviews(calculateDueReviews(systems[0], history));
-          }
+          setAllSystems(systems);
+          // Prefer active system, or first available system
+          const active = systems.find((s) => s.status === "active") || systems[0];
+          setSelectedSystemId(active.id);
+          setSelectedSystem(active);
         }
       } catch (err) {
-        console.error("Error fetching reviews:", err);
+        console.error("Error loading systems:", err);
       } finally {
         setLoading(false);
       }
     }
-    fetchReviews();
+
+    fetchSystems();
   }, []);
 
+  // 2. Fetch reviews strictly isolated to the selected system
+  const fetchReviewsForSystem = useCallback(async (sys) => {
+    if (!sys) return;
+    try {
+      const { data: history, error: revErr } = await supabase
+        .from("reviews")
+        .select("*")
+        .eq("system_id", sys.id)
+        .order("created_at", { ascending: false });
+
+      if (revErr) throw revErr;
+
+      const reviewHistory = history || [];
+      setReviews(reviewHistory);
+      const calculatedDue = calculateReviewPeriods(sys, reviewHistory);
+      setDueReviews(calculatedDue);
+    } catch (e) {
+      console.error("Error loading reviews for system:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedSystem) {
+      fetchReviewsForSystem(selectedSystem);
+    }
+  }, [selectedSystem, fetchReviewsForSystem]);
+
+  const handleSystemChange = (e) => {
+    const sysId = e.target.value;
+    setSelectedSystemId(sysId);
+    const found = allSystems.find((s) => s.id === sysId);
+    setSelectedSystem(found || null);
+  };
+
   const handleStartReview = async (type) => {
-    // Generate an ID for the new review
+    if (!selectedSystem) return;
+    const { periodStart, periodEnd } = getStandardPeriodBounds(type, selectedSystem);
     const newId = `rev_${Date.now()}`;
-    
-    // We will initialize a basic context and redirect. 
-    // The actual data fetching will happen inside the review engine [id] route.
+
     initReview({
       id: newId,
-      systemId: activeSystem.id,
-      type: type,
-      periodStart: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      periodEnd: new Date().toISOString().split("T")[0]
+      systemId: selectedSystem.id,
+      systemName: selectedSystem.name,
+      type,
+      periodStart,
+      periodEnd,
     }, { goals: [], inputs: [], milestones: [] });
 
     router.push(`/reviews/${newId}`);
   };
 
-  const handleStartPendingReview = (dueReview) => {
+  const handleStartDueReview = (dueReview) => {
+    if (!selectedSystem) return;
     const newId = `rev_${Date.now()}`;
+
     initReview({
       id: newId,
-      systemId: activeSystem.id,
+      systemId: selectedSystem.id,
+      systemName: selectedSystem.name,
       type: dueReview.type,
       periodStart: dueReview.period_start,
-      periodEnd: dueReview.period_end
+      periodEnd: dueReview.period_end,
     }, { goals: [], inputs: [], milestones: [] });
+
     router.push(`/reviews/${newId}`);
   };
 
-  const allReviews = [...dueReviews, ...reviews];
-  const hasPending = allReviews.some(r => r.status !== "COMPLETED");
+  const handleResumeDraft = (draftReview) => {
+    initReview({
+      id: draftReview.id,
+      systemId: draftReview.system_id,
+      systemName: selectedSystem?.name,
+      type: draftReview.type,
+      periodStart: draftReview.period_start,
+      periodEnd: draftReview.period_end,
+    }, {
+      goals: draftReview.goal_snapshot || [],
+      inputs: draftReview.input_snapshot || [],
+      milestones: draftReview.milestone_snapshot || [],
+    });
+
+    router.push(`/reviews/${draftReview.id}`);
+  };
 
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="text-sm font-semibold animate-pulse text-gray-500">Loading Ledger...</div>
+        <div className="text-sm font-semibold animate-pulse text-gray-500">Loading Diagnostic Review Center...</div>
       </div>
     );
   }
 
-  if (!activeSystem) {
+  if (!selectedSystem) {
     return (
-      <div className="w-full py-12 animate-in fade-in duration-500">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">No Active System</h2>
-        <hr className="border-gray-200 mb-8" />
-        <p className="text-gray-600 max-w-md">You need an active system before you can review performance.</p>
+      <div className="w-full py-12 text-center max-w-md mx-auto">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">No Operating System Found</h2>
+        <p className="text-gray-500 text-sm mb-6">Initialize a personal operating system to conduct diagnostic reviews.</p>
+        <Link href="/system/new" className="px-6 py-2.5 bg-orange-600 text-white rounded-lg text-sm font-bold shadow-sm">
+          Initialize System
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="w-full animate-in fade-in duration-500 pb-24">
-      
-      <div className="mb-12">
-        <h1 className="text-3xl font-semibold text-gray-900 mb-2">Diagnostic Review</h1>
-        <p className="text-gray-500 text-sm mb-6">Investigate what happened. Evolve your operating inputs.</p>
-        <hr className="border-gray-200 mb-8" />
+    <div className="w-full animate-in fade-in duration-500 pb-24 space-y-8">
+      {/* Header with System Context Switcher */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-gray-200">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-7 h-7 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs">
+              RC
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+              System Review Center
+            </h1>
+          </div>
+          <p className="text-xs text-gray-500">
+            Evaluate execution fidelity, diagnose performance bottlenecks, and evolve operating commitments.
+          </p>
+        </div>
+
+        {/* System Scope Context Bar */}
+        <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-gray-200 shadow-xs">
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
+              Reviewing System
+            </label>
+            <select
+              value={selectedSystemId}
+              onChange={handleSystemChange}
+              className="text-xs font-bold text-gray-900 bg-transparent outline-none cursor-pointer pr-4"
+            >
+              {allSystems.map((sys) => (
+                <option key={sys.id} value={sys.id}>
+                  {sys.name} ({sys.status.toUpperCase()})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="pl-3 border-l border-gray-200 text-right">
+            <span className="text-[10px] text-gray-400 block font-semibold">Lifecycle</span>
+            <span className="text-xs font-bold text-orange-600">
+              {selectedSystem.start_date?.split("T")[0]} → {selectedSystem.expiration_date?.split("T")[0] || selectedSystem.deadline?.split("T")[0] || "Active"}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <div className={`grid grid-cols-1 md:grid-cols-4 gap-6 mb-16 ${hasPending ? 'opacity-50 pointer-events-none' : ''}`}>
-        
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative flex flex-col justify-between hover:shadow-md transition-shadow">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Weekly</h3>
-            <p className="text-sm text-gray-600 mb-8 leading-relaxed">Analyze execution consistency and milestone progress over the past 7 days.</p>
+      {/* Due Scheduled Reviews Banner */}
+      {dueReviews.length > 0 && (
+        <section className="bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 border border-orange-200 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-orange-600" />
+              <h2 className="text-sm font-bold text-gray-900">
+                Scheduled Reviews Requiring Audit ({dueReviews.length})
+              </h2>
+            </div>
+            <span className="text-[11px] font-bold text-orange-700 bg-white px-2.5 py-0.5 rounded-full border border-orange-200">
+              Pending Ledger Verification
+            </span>
           </div>
-          <button disabled={hasPending} onClick={() => handleStartReview("WEEKLY")} className="bg-orange-600 text-white rounded-lg px-4 py-3 text-sm font-semibold hover:bg-orange-700 transition-colors w-full disabled:opacity-50">Start Weekly</button>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {dueReviews.map((due) => (
+              <div key={due.id} className="bg-white p-4 rounded-xl border border-orange-100 flex items-center justify-between shadow-xs">
+                <div>
+                  <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wider block">
+                    {due.type} Cycle
+                  </span>
+                  <div className="text-xs font-bold text-gray-900 mt-0.5">{due.title}</div>
+                  <span className="text-[10px] text-gray-400">
+                    Period: {due.period_start} → {due.period_end}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleStartDueReview(due)}
+                  className="px-3.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold transition-all shadow-xs shrink-0 flex items-center gap-1"
+                >
+                  <Play className="w-3 h-3 fill-current" /> Audit
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Initiate Diagnostic Review (Four Cadences) */}
+      <section className="space-y-4">
+        <h2 className="text-base font-bold text-gray-900">Initiate Period Review</h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { type: "WEEKLY", label: "Weekly Audit", desc: "7-day sprint review of core execution fidelity and weekly milestones." },
+            { type: "MONTHLY", label: "Monthly Retrospective", desc: "Evaluate monthly Rock progress and eliminate friction bottlenecks." },
+            { type: "QUARTERLY", label: "Quarterly Campaign", desc: "Major milestone checkpoint across the 90-day strategic horizon." },
+            { type: "YEARLY", label: "Yearly Evolution", desc: "Strategic overhaul of North Star goals and operating architecture." },
+          ].map((item) => (
+            <div key={item.type} className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
+              <div>
+                <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wider block mb-1">{item.type}</span>
+                <h3 className="text-sm font-bold text-gray-900 mb-2">{item.label}</h3>
+                <p className="text-xs text-gray-500 mb-6 leading-relaxed">{item.desc}</p>
+              </div>
+
+              <button
+                onClick={() => handleStartReview(item.type)}
+                className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-black text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+              >
+                Start {item.type} <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Historical Reviews Ledger for Selected System */}
+      <section className="space-y-4 pt-4">
+        <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+          <h2 className="text-base font-bold text-gray-900">
+            Historical Reviews for {selectedSystem.name}
+          </h2>
+          <span className="text-xs font-semibold text-gray-500">{reviews.length} completed records</span>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative flex flex-col justify-between hover:shadow-md transition-shadow">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Monthly</h3>
-            <p className="text-sm text-gray-600 mb-8 leading-relaxed">Aggregate the entire month. Identify bottlenecks and structural changes.</p>
+        {reviews.length === 0 ? (
+          <div className="p-8 text-center bg-gray-50 rounded-xl border border-gray-200 text-xs text-gray-500">
+            No completed diagnostic reviews on record for this system. Complete a weekly or monthly review to establish historical baselines.
           </div>
-          <button disabled={hasPending} onClick={() => handleStartReview("MONTHLY")} className="bg-orange-600 text-white rounded-lg px-4 py-3 text-sm font-semibold hover:bg-orange-700 transition-colors w-full disabled:opacity-50">Start Monthly</button>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative flex flex-col justify-between hover:shadow-md transition-shadow">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Quarterly</h3>
-            <p className="text-sm text-gray-600 mb-8 leading-relaxed">Major checkpoint. Compare expected vs actual for the entire quarterly goal.</p>
-          </div>
-          <button disabled={hasPending} onClick={() => handleStartReview("QUARTERLY")} className="bg-orange-600 text-white rounded-lg px-4 py-3 text-sm font-semibold hover:bg-orange-700 transition-colors w-full disabled:opacity-50">Start Quarterly</button>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative flex flex-col justify-between hover:shadow-md transition-shadow">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Yearly</h3>
-            <p className="text-sm text-gray-600 mb-8 leading-relaxed">Deep analysis of strategic performance and long-term operating evolution.</p>
-          </div>
-          <button disabled={hasPending} onClick={() => handleStartReview("YEARLY")} className="bg-orange-600 text-white rounded-lg px-4 py-3 text-sm font-semibold hover:bg-orange-700 transition-colors w-full disabled:opacity-50">Start Yearly</button>
-        </div>
-
-      </div>
-
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Historical Records</h2>
-        <hr className="border-gray-200 mb-4" />
-        
-        {hasPending && (
-          <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-            <p className="text-sm text-orange-800 font-medium">You must complete your scheduled and draft reviews before initiating new ones.</p>
-          </div>
-        )}
-        
-        {allReviews.length === 0 ? (
-          <p className="text-gray-500 text-sm py-4">No past reviews found in the ledger.</p>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 font-semibold text-gray-600">Type</th>
-                  <th className="px-6 py-3 font-semibold text-gray-600">Period</th>
-                  <th className="px-6 py-3 font-semibold text-gray-600">Status</th>
-                  <th className="px-6 py-3 font-semibold text-gray-600 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {allReviews.map((review) => (
-                  <tr key={review.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 font-semibold text-gray-900">{review.type}</td>
-                    <td className="px-6 py-4 font-mono text-gray-600">{review.period_start} → {review.period_end}</td>
-                    <td className="px-6 py-4">
-                      {review.status === "COMPLETED" ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">Completed</span>
-                      ) : review.status === "DUE" ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Due</span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">Draft</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {review.status === "DUE" ? (
-                        <button onClick={() => handleStartPendingReview(review)} className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors">
-                          Start Review →
-                        </button>
-                      ) : review.status === "COMPLETED" ? (
-                        <Link href={`/reviews/${review.id}`} className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">
-                          View Record →
-                        </Link>
-                      ) : (
-                        <Link href={`/reviews/${review.id}`} className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors">
-                          Continue Draft →
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-3">
+            {reviews.map((rev) => (
+              <div key={rev.id} className="bg-white p-4 rounded-xl border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                      {rev.type}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                      rev.status === "COMPLETED" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+                    }`}>
+                      {rev.status}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      Completed: {rev.completed_at ? rev.completed_at.split("T")[0] : rev.created_at?.split("T")[0]}
+                    </span>
+                  </div>
+                  <div className="text-xs font-bold text-gray-900">
+                    Period: {rev.period_start} → {rev.period_end}
+                  </div>
+                  {rev.summary && (
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-1">{typeof rev.summary === "string" ? rev.summary : JSON.stringify(rev.summary)}</p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {rev.status === "DRAFT" ? (
+                    <button
+                      onClick={() => handleResumeDraft(rev)}
+                      className="px-3.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold"
+                    >
+                      Resume Draft
+                    </button>
+                  ) : (
+                    <Link
+                      href={`/reviews/${rev.id}`}
+                      className="px-3.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold flex items-center gap-1"
+                    >
+                      View Report <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
-      </div>
-
+      </section>
     </div>
   );
 }

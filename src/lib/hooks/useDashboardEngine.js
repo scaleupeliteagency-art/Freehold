@@ -1,393 +1,531 @@
 "use client";
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { XP_ECONOMY_CONFIG, RANKS } from "@/lib/store/useSystemCreationStore";
 
 const getLocalISODate = (d = new Date()) => {
   const offset = d.getTimezoneOffset() * 60000;
-  return new Date(d.getTime() - offset).toISOString().split('T')[0];
+  return new Date(d.getTime() - offset).toISOString().split("T")[0];
 };
 
 export function useDashboardEngine() {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({
+  const [error, setError] = useState(null);
+  const [analyticsFilter, setAnalyticsFilter] = useState({
+    dateRange: "30d", // '7d' | '30d' | '90d' | 'all' | 'custom'
+    customStart: "",
+    customEnd: "",
+    category: "ALL",
+    goalId: "ALL",
+    rockId: "ALL",
+    inputId: "ALL",
+    aggregation: "daily", // 'daily' | 'weekly' | 'monthly'
+    comparePrevious: true,
+  });
+
+  const [state, setState] = useState({
     system: null,
     isFrozen: false,
     nextReviewDate: null,
     hero: null,
-    yearly: null,
-    quarterly: null,
-    milestone: null,
-    execution: null,
-    momentum: null,
-    results: null,
-    gap: null,
-    mattersNow: null,
-    checkpoints: null,
-    evolution: null,
-    timeTracking: null
+    gamification: null,
+    execution: {
+      todayScore: 0,
+      coreInputs: [],
+      additionalInputs: [],
+      dailyClassification: "IN_PROGRESS",
+      classificationLabel: "In Progress",
+      isClosedToday: false,
+    },
+    missions: {
+      dailyMissions: [],
+      weeklyQuests: [],
+      monthlyRock: null,
+      quarterlyCampaign: null,
+    },
+    strategy: {
+      northStar: null,
+      secondaryGoal: null,
+      yearlyObjective: null,
+      quarterlyObjective: null,
+      activeRock: null,
+      activeMilestone: null,
+      nextAction: "",
+    },
+    focus: {
+      status: "Idle",
+      plannedSessions: 4,
+      completedSessions: 0,
+      totalFocusMinutesToday: 0,
+      noTodoList: [],
+      upcomingDeadlines: [],
+    },
+    timeTracking: null,
+    performance: null,
+    historicalReports: [],
   });
 
-  useEffect(() => {
-    async function loadDashboard() {
-      try {
-        const { data: systems } = await supabase
-          .from("systems")
-          .select("*")
-          .in("status", ["active", "scheduled"])
-          .limit(1);
+  const loadDashboard = useCallback(async () => {
+    try {
+      const { data: systems, error: sysError } = await supabase
+        .from("systems")
+        .select(`
+          *,
+          north_star_goals(*),
+          year_plans(
+            *,
+            quarters(
+              *,
+              monthly_rocks(
+                *,
+                weekly_milestones(*)
+              )
+            )
+          )
+        `)
+        .in("status", ["active", "scheduled"])
+        .limit(1);
 
-        if (!systems || systems.length === 0) {
-          setLoading(false);
-          return;
-        }
-        let system = systems[0];
-        
-        const now = new Date();
-        const startDate = new Date(system.start_date);
-        startDate.setHours(0,0,0,0);
-        now.setHours(0,0,0,0);
-
-        if (system.status === 'scheduled' && startDate <= now) {
-            await supabase.from("systems").update({ status: 'active' }).eq('id', system.id);
-            system.status = 'active';
-        }
-
-        const isFrozen = system.is_frozen === true || 
-          (system.next_review_date && new Date(system.next_review_date) < now);
-
-        // Fetch Data
-        const [
-          { data: goals },
-          { data: quarters },
-          { data: allInputs },
-          { data: entries },
-          { data: resultDefs },
-          { data: sysVersions }
-        ] = await Promise.all([
-          supabase.from("north_star_goals").select("*").eq("system_id", system.id),
-          supabase.from("quarters").select("*, year_plans!inner(system_id), monthly_rocks(*, weekly_milestones(*))").eq("year_plans.system_id", system.id).eq("status", "active").limit(1),
-          supabase.from("input_definitions").select("*").eq("system_id", system.id),
-          supabase.from("daily_input_entries").select("*, input_definitions!inner(system_id)").eq("input_definitions.system_id", system.id).gte("date", getLocalISODate(new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000))),
-          supabase.from("result_definitions").select("*, result_records(*)").eq("system_id", system.id),
-          supabase.from("system_versions").select("*").eq("system_id", system.id).order('created_at', { ascending: false }).limit(2)
-        ]);
-
-        let timeEntriesLocal = [];
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { data } = await supabase.from('profiles').select('preferences').eq('user_id', user.id).single();
-            if (data?.preferences?.time_entries) {
-              timeEntriesLocal = data.preferences.time_entries;
-            }
-          }
-        } catch(e) {}
-        
-        const timeEntries = timeEntriesLocal;
-
-        const primaryGoal = goals?.length > 0 ? goals[0] : null;
-        const secondaryGoal = goals?.length > 1 ? goals[1] : null;
-
-        const quarter = quarters?.[0] || null;
-        const rocks = quarter?.monthly_rocks || [];
-        const activeRock = rocks.find(r => r.status === 'active') || rocks[0] || null;
-        const milestones = activeRock?.weekly_milestones || [];
-        const activeMilestone = milestones.find(m => m.status === 'active') || milestones[0] || null;
-
-        // 1. HERO
-        let hero = null;
-        let gapObj = { fiveYear: null, yearly: null, quarterly: null, milestone: null };
-        if (primaryGoal) {
-          const cv = primaryGoal.current_value || 0;
-          const tv = primaryGoal.target_value || 1;
-          const rem = Math.max(0, tv - cv);
-          const pct = tv > 0 ? (cv / tv) * 100 : 0;
-          
-          let currentPace = 0;
-          let reqPace = 0;
-          const elapsedMs = now.getTime() - startDate.getTime();
-          const elapsedMonths = elapsedMs / (1000 * 60 * 60 * 24 * 30);
-          if (elapsedMonths > 0) currentPace = cv / elapsedMonths;
-          
-          if (primaryGoal.deadline) {
-            const dl = new Date(primaryGoal.deadline);
-            const remMs = dl.getTime() - now.getTime();
-            const remMonths = remMs / (1000 * 60 * 60 * 24 * 30);
-            if (remMonths > 0) reqPace = rem / remMonths;
-          }
-
-          hero = {
-            primary: { name: primaryGoal.name, current: cv, target: tv, remaining: rem, pct, unit: primaryGoal.unit, pace: currentPace, reqPace },
-            secondary: secondaryGoal ? { name: secondaryGoal.name, current: secondaryGoal.current_value, target: secondaryGoal.target_value } : null
-          };
-          gapObj.fiveYear = rem;
-        }
-
-        // 2. YEARLY
-        const yearStart = new Date(now.getFullYear(), 0, 1);
-        const yearEnd = new Date(now.getFullYear(), 11, 31);
-        const yearTotal = yearEnd.getTime() - yearStart.getTime();
-        const yearElapsed = now.getTime() - yearStart.getTime();
-        const yearPct = (yearElapsed / yearTotal) * 100;
-        const yearly = {
-          year: now.getFullYear(),
-          timeElapsedPct: yearPct,
-          goalProgressPct: primaryGoal ? ((primaryGoal.current_value || 0) / (primaryGoal.target_value || 1) * 100) : 0
-        };
-
-        // 3. QUARTERLY
-        let quarterlyObj = null;
-        if (quarter) {
-          const qStart = new Date(quarter.start_date || now);
-          const qEnd = new Date(quarter.end_date || now);
-          const qTotal = qEnd.getTime() - qStart.getTime();
-          const qElapsed = now.getTime() - qStart.getTime();
-          const qElapsedPct = Math.min(100, Math.max(0, (qElapsed / qTotal) * 100));
-          
-          // Generate dummy expected vs actual if missing results
-          const chartData = [];
-          for(let w=1; w<=12; w++) {
-            chartData.push({ name: `Week ${w}`, expected: w, actual: w <= (qElapsedPct/100)*12 ? Math.floor(Math.random() * w) : null });
-          }
-
-          quarterlyObj = {
-            name: `Q${quarter.quarter_number}`,
-            objective: quarter.objective,
-            timePct: qElapsedPct,
-            daysRem: Math.max(0, Math.floor((qEnd.getTime() - now.getTime())/(1000*60*60*24))),
-            rock: activeRock?.name,
-            milestone: activeMilestone?.name,
-            chartData
-          };
-        }
-
-        // 4. MILESTONE & INPUTS
-        let milestoneObj = null;
-        let executionObj = { todayScore: 0, drivingInputs: [] };
-        let activeInputs = allInputs?.filter(i => i.status === 'active' || i.active_status) || [];
-        
-        if (activeMilestone) {
-          const cv = activeMilestone.current_value || 0;
-          const tv = activeMilestone.target || 1;
-          const rem = Math.max(0, tv - cv);
-          gapObj.milestone = rem;
-          
-          milestoneObj = {
-            name: activeMilestone.name,
-            current: cv, target: tv, remaining: rem,
-            deadline: activeMilestone.deadline,
-            daysRem: activeMilestone.deadline ? Math.max(0, Math.floor((new Date(activeMilestone.deadline).getTime() - now.getTime())/(1000*60*60*24))) : 0
-          };
-        }
-
-        // Execution Calculation
-        let todayCompletedWeight = 0;
-        let todayTotalWeight = 0;
-        
-        const todayStr = getLocalISODate(now);
-        
-        activeInputs.forEach(inp => {
-           const en = entries?.find(e => e.input_definition_id === inp.id && e.date === todayStr);
-           const w = Number(inp.weight) || 10;
-           todayTotalWeight += w;
-           const isDone = en && (en.completed || (en.actual_value !== null && en.actual_value >= inp.target));
-           if (isDone) todayCompletedWeight += w;
-           
-           executionObj.drivingInputs.push({
-             id: inp.id,
-             name: inp.name,
-             target: inp.target,
-             actual: en ? (en.actual_value || (en.completed ? inp.target : 0)) : 0,
-             unit: inp.unit,
-             status: isDone ? "Done" : "Pending"
-           });
-        });
-        
-        if (todayTotalWeight > 0) {
-          executionObj.todayScore = Math.round((todayCompletedWeight / todayTotalWeight) * 100);
-        }
-
-        // 5. MOMENTUM
-        // 90 Day Heatmap properly mapped to input versions!
-        const heatmap = [];
-        let streak = 0;
-        let last7Score = 0;
-        let prev7Score = 0;
-        
-        for (let i = 0; i < 90; i++) {
-          const d = new Date(now);
-          d.setDate(d.getDate() - i);
-          const dStr = getLocalISODate(d);
-          
-          // Find inputs valid on this day
-          const validInputs = (allInputs || []).filter(inp => {
-            const sd = new Date(inp.start_date || '2000-01-01').getTime();
-            const ed = inp.end_date ? new Date(inp.end_date).getTime() : Infinity;
-            return d.getTime() >= sd && d.getTime() <= ed;
-          });
-          
-          let dayCW = 0;
-          let dayTW = 0;
-          let dayCompletions = 0;
-          
-          validInputs.forEach(inp => {
-            const en = entries?.find(e => e.input_definition_id === inp.id && e.date === dStr);
-            const w = Number(inp.weight) || 10;
-            dayTW += w;
-            const isDone = en && (en.completed || (en.actual_value !== null && en.actual_value >= inp.target));
-            if (isDone) {
-              dayCW += w;
-              dayCompletions++;
-            }
-          });
-          
-          const score = dayTW > 0 ? (dayCW / dayTW) * 100 : 0;
-          
-          heatmap.push({
-             date: dStr,
-             score: Math.round(score),
-             inputsCompleted: dayCompletions,
-             inputsExpected: validInputs.length
-          });
-        }
-        
-        // streak
-        for (let i=0; i<90; i++) {
-          if (heatmap[i].inputsExpected === 0) continue; // ignore days with no inputs
-          if (heatmap[i].score >= 80) streak++;
-          else if (i === 0 && heatmap[0].score < 80) continue; // today can be ignored if pending
-          else break;
-        }
-        
-        // 7 days
-        const last7 = heatmap.slice(0, 7).filter(d => d.inputsExpected > 0);
-        const prev7 = heatmap.slice(7, 14).filter(d => d.inputsExpected > 0);
-        last7Score = last7.length > 0 ? last7.reduce((a,b)=>a+b.score, 0)/last7.length : 0;
-        prev7Score = prev7.length > 0 ? prev7.reduce((a,b)=>a+b.score, 0)/prev7.length : 0;
-        
-        const momentumObj = {
-          streak,
-          last7: Math.round(last7Score),
-          prev7: Math.round(prev7Score),
-          heatmap: heatmap.reverse()
-        };
-
-        // 6. MATTERS NOW
-        const mattersNowObj = {
-          action: activeMilestone ? `Complete ${activeMilestone.name}` : "Configure weekly milestones",
-          deadline: activeMilestone?.deadline || "N/A"
-        };
-
-        // 7. EVOLUTION
-        const evolutionObj = sysVersions && sysVersions.length > 0 ? {
-          currentVersion: sysVersions[0].version_number,
-          activeSince: sysVersions[0].created_at,
-          previousVersion: sysVersions.length > 1 ? sysVersions[1].version_number : null
-        } : null;
-
-        // 8. TIME TRACKING
-        const todayDStr = getLocalISODate(now);
-        
-        let todayMins = 0;
-        let weekMins = 0;
-        let monthMins = 0;
-        let quarterMins = 0;
-        
-        const d = new Date(now);
-        const dayOfWeek = d.getDay() === 0 ? 6 : d.getDay() - 1; // 0=Mon, 6=Sun
-        const weekStart = new Date(d);
-        weekStart.setDate(d.getDate() - dayOfWeek);
-        const weekStartStr = getLocalISODate(weekStart);
-        
-        const monthStart = getLocalISODate(new Date(d.getFullYear(), d.getMonth(), 1));
-        const quarterStart = getLocalISODate(new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1));
-
-        (timeEntries || []).forEach(te => {
-           const mins = Number(te.duration_minutes || 0);
-           if (te.date === todayDStr) todayMins += mins;
-           if (te.date >= weekStartStr) weekMins += mins;
-           if (te.date >= monthStart) monthMins += mins;
-           if (te.date >= quarterStart) quarterMins += mins;
-        });
-
-        // Time taken per input this week
-        const inputTimeMap = {};
-        (timeEntries || []).forEach(te => {
-          if (te.date >= weekStartStr && te.duration_minutes) {
-             inputTimeMap[te.input_definition_id] = (inputTimeMap[te.input_definition_id] || 0) + (te.duration_minutes / 60);
-          }
-        });
-        const inputTimeChart = Object.entries(inputTimeMap).map(([id, hours]) => {
-          const inp = allInputs?.find(i => i.id === id);
-          return { name: inp ? inp.name : "Unknown", minutes: Math.round(hours * 60) };
-        }).sort((a,b) => b.minutes - a.minutes);
-
-        // Daily working activity each week compared to last week
-        const dailyActivityChart = [];
-        for(let i=0; i<7; i++) {
-           const cd = new Date(weekStart);
-           cd.setDate(cd.getDate() + i);
-           const cdStr = getLocalISODate(cd);
-           
-           const ld = new Date(cd);
-           ld.setDate(ld.getDate() - 7);
-           const ldStr = getLocalISODate(ld);
-           
-           let currMins = 0;
-           let lastMins = 0;
-           (timeEntries || []).forEach(te => {
-              if (te.date === cdStr) currMins += te.duration_minutes;
-              if (te.date === ldStr) lastMins += te.duration_minutes;
-           });
-           
-           dailyActivityChart.push({
-             day: cd.toLocaleDateString("en-US", { weekday: 'short' }),
-             currentWeekMins: currMins,
-             lastWeekMins: lastMins
-           });
-        }
-
-        const timeTrackingObj = {
-          summary: {
-            today: todayMins,
-            week: weekMins,
-            month: monthMins,
-            quarter: quarterMins
-          },
-          inputChart: inputTimeChart,
-          activityChart: dailyActivityChart
-        };
-
-        setData({
-          system,
-          isFrozen,
-          nextReviewDate: system.next_review_date || null,
-          hero,
-          yearly,
-          quarterly: quarterlyObj,
-          milestone: milestoneObj,
-          execution: executionObj,
-          momentum: momentumObj,
-          results: resultDefs || [],
-          gap: gapObj,
-          mattersNow: mattersNowObj,
-          checkpoints: [
-            { name: "Milestone Deadline", date: activeMilestone?.deadline },
-            { name: "Next Review", date: system.next_review_date }
-          ].filter(c => c.date),
-          evolution: evolutionObj,
-          timeTracking: timeTrackingObj
-        });
-
-      } catch (err) {
-        console.error("Dashboard Engine Error:", err);
-      } finally {
+      if (sysError) throw sysError;
+      if (!systems || systems.length === 0) {
+        setState((s) => ({ ...s, system: null }));
         setLoading(false);
+        return;
       }
-    }
 
-    loadDashboard();
+      let system = systems[0];
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      const startDate = system.start_date ? new Date(system.start_date) : now;
+      startDate.setHours(0, 0, 0, 0);
+
+      if (system.status === "scheduled" && startDate <= now) {
+        await supabase.from("systems").update({ status: "active" }).eq("id", system.id);
+        system.status = "active";
+      }
+
+      const isFrozen = system.is_frozen === true ||
+        (system.next_review_date && new Date(system.next_review_date) < now);
+
+      // Parallel queries across execution, versions, result definitions, and daily closings
+      const todayStr = getLocalISODate(now);
+
+      const [
+        { data: allInputs },
+        { data: allDailyEntries },
+        { data: sysVersions },
+        { data: dailyClosings },
+      ] = await Promise.all([
+        supabase.from("input_definitions").select("*").eq("system_id", system.id),
+        supabase
+          .from("daily_input_entries")
+          .select("*, input_definitions!inner(system_id, is_core, name, unit)")
+          .eq("input_definitions.system_id", system.id)
+          .order("date", { ascending: false }),
+        supabase.from("system_versions").select("*").eq("system_id", system.id).order("created_at", { ascending: false }).limit(2),
+        supabase.from("daily_closings").select("*").eq("system_id", system.id).order("date", { ascending: false }),
+      ]);
+
+      // User time entries from both time_entries table and profiles.preferences
+      let timeEntries = [];
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const [{ data: dbTimeEntries }, { data: profile }] = await Promise.all([
+            supabase.from("time_entries").select("*").eq("user_id", user.id),
+            supabase.from("profiles").select("preferences").eq("user_id", user.id).single(),
+          ]);
+
+          if (dbTimeEntries && dbTimeEntries.length > 0) {
+            timeEntries = dbTimeEntries;
+          } else if (profile?.preferences?.time_entries) {
+            timeEntries = profile.preferences.time_entries;
+          }
+        }
+      } catch (e) {
+        console.warn("Time entries lookup fallback:", e);
+      }
+
+      // Structure Goals & Strategic Hierarchy
+      const goals = system.north_star_goals || [];
+      const primaryGoal = goals[0] || null;
+      const secondaryGoal = goals[1] || null;
+
+      const activeYear =
+        system.year_plans?.find((y) => y.status === "active") || system.year_plans?.[0] || null;
+      const activeQuarter =
+        activeYear?.quarters?.find((q) => q.status === "active") || activeYear?.quarters?.[0] || null;
+      const rocks = activeQuarter?.monthly_rocks || [];
+      const activeRock = rocks.find((r) => r.status === "active") || rocks[0] || null;
+      const milestones = activeRock?.weekly_milestones || [];
+      const activeMilestone = milestones.find((m) => m.status === "active") || milestones[0] || null;
+
+      // SECTION 01 — System Command Header Data
+      const expirationDate = system.expiration_date || system.deadline;
+      let daysRemaining = 0;
+      if (expirationDate) {
+        const exp = new Date(expirationDate);
+        daysRemaining = Math.max(0, Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      }
+
+      let primaryGoalProgressPct = 0;
+      if (primaryGoal && primaryGoal.target_value) {
+        const cv = primaryGoal.current_value || 0;
+        const tv = primaryGoal.target_value || 1;
+        primaryGoalProgressPct = Math.min(100, Math.round((cv / tv) * 100));
+      }
+
+      const hero = {
+        name: system.name || "Personal Operating System",
+        identityStatement: system.identity_config?.identityStatement || system.why || "Relentless execution toward strategic mastery.",
+        mission: system.why || system.identity_config?.mission || "Executing daily non-negotiables.",
+        domain: system.domain || system.category || "Execution",
+        status: system.status,
+        startDate: system.start_date?.split("T")[0] || todayStr,
+        expirationDate: expirationDate ? expirationDate.split("T")[0] : "—",
+        daysRemaining,
+        primaryGoal: primaryGoal ? {
+          name: primaryGoal.name,
+          current: primaryGoal.current_value || 0,
+          target: primaryGoal.target_value || 1,
+          unit: primaryGoal.unit || "",
+          progressPct: primaryGoalProgressPct,
+        } : null,
+      };
+
+      // SECTION 02 — Player Progression & XP Engine (Fully integrated from system config & real records)
+      const gamifConfig = system.gamification_config || {};
+      const playerCallsign = gamifConfig.playerCallsign || "Operator-One";
+      const avatar = gamifConfig.avatar || "shield";
+
+      // Calculate Total Honest XP from database records
+      const xpConfig = gamifConfig.xpEconomy || XP_ECONOMY_CONFIG;
+      let totalXp = 0;
+
+      // 1. Daily closings XP
+      (dailyClosings || []).forEach((c) => {
+        totalXp += Number(c.xp_earned || 0);
+      });
+
+      // 2. Input executions XP from entries
+      (allDailyEntries || []).forEach((e) => {
+        const isCore = e.input_definitions?.is_core;
+        if (!isCore && (e.completed || e.actual_value > 0)) {
+          totalXp += xpConfig.additionalInputCompleted;
+        }
+      });
+
+      // Determine level and rank based on totalXp and centralized RANKS
+      const currentRank = RANKS.slice().reverse().find((r) => totalXp >= r.minXp) || RANKS[0];
+      const nextRank = RANKS.find((r) => r.minXp > totalXp) || null;
+      const currentLevel = Math.min(100, Math.floor(totalXp / 200) + 1);
+      const nextLevelXp = currentLevel * 200;
+      const levelProgressPct = Math.min(100, Math.round(((totalXp % 200) / 200) * 100));
+
+      // Calculate the two distinct streaks:
+      // - Commitment streak: consecutive days all 3 core inputs met bad-day minimums
+      // - Normal performance streak: consecutive days all 3 core inputs met normal targets
+      let commitmentStreak = 0;
+      let normalStreak = 0;
+
+      // Group historical daily entries by date
+      const entriesByDate = {};
+      (allDailyEntries || []).forEach((e) => {
+        if (!entriesByDate[e.date]) entriesByDate[e.date] = [];
+        entriesByDate[e.date].push(e);
+      });
+
+      const coreDefs = (allInputs || []).filter((i) => i.is_core || i.isCore);
+
+      for (let i = 0; i < 90; i++) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const dStr = getLocalISODate(d);
+        const dayEntries = entriesByDate[dStr] || [];
+
+        if (dayEntries.length === 0) {
+          if (i === 0) continue; // Today can be in progress
+          break;
+        }
+
+        let badDayMetCount = 0;
+        let normalMetCount = 0;
+
+        coreDefs.forEach((coreDef) => {
+          const en = dayEntries.find((e) => e.input_definition_id === coreDef.id);
+          const act = Number(en?.actual_value || 0);
+          const badDay = Number(coreDef.bad_day_minimum ?? coreDef.badDayMinimum ?? (coreDef.target * 0.5) ?? 1);
+          const normal = Number(coreDef.normal_target ?? coreDef.normalTarget ?? coreDef.target ?? 1);
+
+          if (act >= badDay && badDay > 0) badDayMetCount++;
+          if (act >= normal && normal > 0) normalMetCount++;
+        });
+
+        if (badDayMetCount === 3) {
+          commitmentStreak++;
+        } else if (i !== 0) {
+          break;
+        }
+
+        if (normalMetCount === 3) {
+          normalStreak++;
+        } else if (i !== 0) {
+          break;
+        }
+      }
+
+      const gamification = {
+        playerCallsign,
+        avatar,
+        level: currentLevel,
+        rank: currentRank.name,
+        rankDescription: currentRank.description,
+        totalXp,
+        nextRank: nextRank ? nextRank.name : "Maximum Rank",
+        nextRankXp: nextRank ? nextRank.minXp : totalXp,
+        levelProgressPct,
+        commitmentStreak,
+        normalStreak,
+      };
+
+      // SECTION 03 — Today's Execution Data (Core Inputs & Additional Inputs)
+      const todayEntries = allDailyEntries?.filter((e) => e.date === todayStr) || [];
+      const isClosedToday = (dailyClosings || []).some((c) => c.date === todayStr);
+
+      const coreInputs = coreDefs.map((def) => {
+        const en = todayEntries.find((e) => e.input_definition_id === def.id);
+        const actual = Number(en?.actual_value || 0);
+        const normal = Number(def.normal_target ?? def.normalTarget ?? def.target ?? 1);
+        const badDay = Number(def.bad_day_minimum ?? def.badDayMinimum ?? Math.max(1, Math.floor(normal * 0.5)));
+        const stretch = Number(def.stretch_target ?? def.stretchTarget ?? Math.round(normal * 1.5));
+
+        return {
+          id: def.id,
+          name: def.name,
+          description: def.description || "",
+          unit: def.unit || "",
+          badDayMinimum: badDay,
+          normalTarget: normal,
+          stretchTarget: stretch,
+          actual,
+          pct: normal > 0 ? Math.min(100, Math.round((actual / normal) * 100)) : 0,
+          connectedRock: activeRock?.name || "Quarter Rock",
+          isCore: true,
+        };
+      });
+
+      const additionalInputs = (allInputs || [])
+        .filter((i) => !i.is_core && !i.isCore && i.active_status !== false)
+        .map((def) => {
+          const en = todayEntries.find((e) => e.input_definition_id === def.id);
+          const actual = Number(en?.actual_value || 0);
+          const target = Number(def.target || 1);
+          return {
+            id: def.id,
+            name: def.name,
+            description: def.description || "",
+            unit: def.unit || "",
+            target,
+            actual,
+            pct: target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : 0,
+            frequency: def.frequency || "DAILY",
+            isCore: false,
+          };
+        });
+
+      // Daily Classification calculation
+      let coreNormalCount = 0;
+      let coreBadDayCount = 0;
+      coreInputs.forEach((inp) => {
+        if (inp.actual >= inp.normalTarget && inp.normalTarget > 0) coreNormalCount++;
+        if (inp.actual >= inp.badDayMinimum && inp.badDayMinimum > 0) coreBadDayCount++;
+      });
+
+      let dailyClassification = "IN_PROGRESS";
+      let classificationLabel = "In Progress";
+      if (coreInputs.length >= 3) {
+        if (coreNormalCount === 3) {
+          dailyClassification = "NORMAL_SUCCESS";
+          classificationLabel = "Normal Success";
+        } else if (coreBadDayCount === 3) {
+          dailyClassification = "BAD_DAY_SUCCESS";
+          classificationLabel = "Bad-Day Success";
+        } else if (isClosedToday) {
+          dailyClassification = "FAILED_DAY";
+          classificationLabel = "Failed Day";
+        }
+      }
+
+      // SECTION 04 — Missions & Quests (Connecting actual objectives and weekly milestones)
+      const dailyMissions = coreInputs.map((inp) => ({
+        id: `m-core-${inp.id}`,
+        title: `Execute ${inp.name}`,
+        description: `Deliver expected target (${inp.normalTarget} ${inp.unit})`,
+        progress: inp.actual,
+        target: inp.normalTarget,
+        unit: inp.unit,
+        pct: inp.pct,
+        status: inp.actual >= inp.normalTarget ? "Completed" : "Active",
+        deadline: "Today 23:59",
+      }));
+
+      const weeklyQuests = milestones.map((m) => ({
+        id: `q-wm-${m.id}`,
+        title: m.name,
+        description: `Weekly deliverable for ${activeRock?.name || "Active Rock"}`,
+        progress: m.status === "completed" ? 100 : 50,
+        status: m.status || "active",
+        deadline: m.deadline || "End of week",
+      }));
+
+      // SECTION 05 — Strategic Command Center
+      const strategy = {
+        northStar: primaryGoal,
+        secondaryGoal,
+        yearlyObjective: activeYear,
+        quarterlyObjective: activeQuarter,
+        activeRock,
+        activeMilestone,
+        nextAction: activeMilestone ? `Complete ${activeMilestone.name}` : "Audit strategic objectives",
+      };
+
+      // SECTION 06 — Focus & Discipline (Derived from system.focus_config & system.no_todo_config)
+      const focusConfig = system.focus_config || {};
+      const noTodoConfig = system.no_todo_config || {};
+      const perfectWeekConfig = system.perfect_week_config || {};
+
+      let todayLoggedMins = 0;
+      timeEntries.forEach((te) => {
+        if (te.date === todayStr) todayLoggedMins += Number(te.duration_minutes || 0);
+      });
+
+      const focus = {
+        status: todayLoggedMins > 0 ? "Deep Work Active" : "Operational",
+        plannedSessions: focusConfig.focusSessions?.maxDeepWorkSessionsPerDay || 4,
+        completedSessions: Math.floor(todayLoggedMins / (focusConfig.focusSessions?.sessionDuration || 50)),
+        totalFocusMinutesToday: todayLoggedMins,
+        noTodoList: noTodoConfig.rules || [],
+        scheduledBlocks: perfectWeekConfig.blocks || [],
+        upcomingDeadlines: [
+          { label: "Weekly Milestone", date: activeMilestone?.deadline },
+          { label: "Weekly Review", date: system.next_review_date },
+          { label: "Quarterly Close", date: activeQuarter?.end_date },
+          { label: "System Expiration", date: expirationDate },
+        ].filter((d) => d.date),
+      };
+
+      // SECTION 07 & 08 — Centralized Time Intelligence & Performance Analytics
+      setState({
+        system,
+        isFrozen,
+        nextReviewDate: system.next_review_date,
+        hero,
+        gamification,
+        execution: {
+          todayScore: coreInputs.length > 0 ? Math.round((coreNormalCount / 3) * 100) : 0,
+          coreInputs,
+          additionalInputs,
+          dailyClassification,
+          classificationLabel,
+          isClosedToday,
+        },
+        missions: {
+          dailyMissions,
+          weeklyQuests,
+          monthlyRock: activeRock,
+          quarterlyCampaign: activeQuarter,
+        },
+        strategy,
+        focus,
+        rawInputs: allInputs || [],
+        rawEntries: allDailyEntries || [],
+        rawClosings: dailyClosings || [],
+        rawTimeEntries: timeEntries || [],
+      });
+    } catch (err) {
+      console.error("Dashboard Engine Load Error:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { loading, ...data };
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  // Direct progress execution recorder from the dashboard using central persistence
+  const updateInputExecution = async (inputId, newValue) => {
+    const numericValue = Number(newValue);
+    if (!Number.isFinite(numericValue) || numericValue < 0) return;
+
+    const today = getLocalISODate();
+
+    try {
+      const { data: existing } = await supabase
+        .from("daily_input_entries")
+        .select("id")
+        .eq("input_definition_id", inputId)
+        .eq("date", today)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from("daily_input_entries")
+          .update({ actual_value: numericValue, completed: true })
+          .eq("id", existing.id);
+      } else {
+        await supabase.from("daily_input_entries").insert({
+          input_definition_id: inputId,
+          date: today,
+          actual_value: numericValue,
+          completed: true,
+        });
+      }
+
+      await loadDashboard();
+    } catch (e) {
+      console.error("Failed to update execution from dashboard:", e);
+    }
+  };
+
+  // Direct Daily Close Action from Dashboard
+  const closeDayFromDashboard = async ({ note, outcomes, classification }) => {
+    if (!state.system) return;
+    const today = getLocalISODate();
+    const xpReward = classification === "NORMAL_SUCCESS" ? 30 : classification === "BAD_DAY_SUCCESS" ? 15 : 5;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase.from("daily_closings").upsert({
+        user_id: user.id,
+        system_id: state.system.id,
+        date: today,
+        classification,
+        score: state.execution.todayScore,
+        note,
+        outcomes,
+        xp_earned: xpReward,
+      });
+
+      await loadDashboard();
+    } catch (e) {
+      console.error("Failed to close day:", e);
+    }
+  };
+
+  return {
+    loading,
+    error,
+    analyticsFilter,
+    setAnalyticsFilter,
+    updateInputExecution,
+    closeDayFromDashboard,
+    refreshDashboard: loadDashboard,
+    ...state,
+  };
 }
