@@ -93,7 +93,7 @@ export default function Step12Activation() {
         gamification_config: gamification,
       };
 
-      const { data: sysData, error: sysErr } = await supabase
+      let { data: sysData, error: sysErr } = await supabase
         .from("systems")
         .insert(systemInsertPayload)
         .select()
