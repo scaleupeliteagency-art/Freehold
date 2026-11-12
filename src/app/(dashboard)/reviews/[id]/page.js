@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Check, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import useReviewEngineStore from "@/lib/store/useReviewEngineStore";
@@ -14,10 +14,10 @@ import ReviewSummary from "./components/ReviewSummary";
 
 export default function ReviewFlow() {
   const { id } = useParams();
-  const router = useRouter();
 
   const [currentStep, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   const reviewContext = useReviewEngineStore((state) => state.reviewContext);
 
@@ -41,39 +41,106 @@ export default function ReviewFlow() {
   useEffect(() => {
     async function loadData() {
       try {
-        // Fetch active system
-        const { data: systems } = await supabase
+        let systemQuery = supabase
           .from("systems")
           .select("*")
-          .eq("status", "active")
+          .order("created_at", { ascending: false })
           .limit(1);
+        if (reviewContext?.systemId) {
+          systemQuery = supabase
+            .from("systems")
+            .select("*")
+            .eq("id", reviewContext.systemId);
+        } else {
+          systemQuery = systemQuery.eq("status", "active");
+        }
 
-        if (!systems || systems.length === 0) {
+        const { data: systems, error: systemError } = await systemQuery;
+        if (systemError) throw systemError;
+        const system = systems?.[0] || null;
+        if (!system) {
           setLoading(false);
           return;
         }
-        const system = systems[0];
 
-        // Fetch active milestone (lightweight — full hierarchy assembled in DataAssembly)
-        const { data: quarters } = await supabase
-          .from("quarters")
-          .select("*, year_plans!inner(system_id), monthly_rocks(*, weekly_milestones(*))")
-          .eq("year_plans.system_id", system.id)
-          .eq("status", "active")
-          .limit(1);
+        const { data: yearPlans, error: yearError } = await supabase
+          .from("year_plans")
+          .select("*")
+          .eq("system_id", system.id)
+          .order("year_number", { ascending: false });
+        if (yearError) throw yearError;
+        const activeYear =
+          yearPlans?.find((year) => year.status?.toLowerCase() === "active") ||
+          yearPlans?.[0] ||
+          null;
 
-        const quarter = quarters?.[0] || null;
-        const rocks = quarter?.monthly_rocks || [];
-        const activeRock = rocks.find((r) => r.status === "active") || rocks[0] || null;
-        const ms = activeRock?.weekly_milestones || [];
-        const activeMilestone = ms.find((m) => m.status === "active") || ms[0] || null;
+        let activeQuarter = null;
+        let activeRock = null;
+        let activeMilestone = null;
+
+        if (activeYear) {
+          const { data: quarters, error: quarterError } = await supabase
+            .from("quarters")
+            .select("*")
+            .eq("year_plan_id", activeYear.id)
+            .order("quarter_number", { ascending: false });
+          if (quarterError) throw quarterError;
+
+          activeQuarter =
+            quarters?.find((quarter) => quarter.status?.toLowerCase() === "active") ||
+            quarters?.find((quarter) => quarter.status?.toLowerCase() === "pending") ||
+            quarters?.find(
+              (quarter) =>
+                !["completed", "done"].includes(quarter.status?.toLowerCase())
+            ) ||
+            quarters?.[0] ||
+            null;
+        }
+
+        if (activeQuarter) {
+          const { data: rocks, error: rockError } = await supabase
+            .from("monthly_rocks")
+            .select("*")
+            .eq("quarter_id", activeQuarter.id)
+            .order("month", { ascending: true });
+          if (rockError) throw rockError;
+
+          activeRock =
+            rocks?.find((rock) => rock.status?.toLowerCase() === "active") ||
+            rocks?.find((rock) => rock.status?.toLowerCase() === "pending") ||
+            rocks?.find(
+              (rock) =>
+                !["completed", "done"].includes(rock.status?.toLowerCase())
+            ) ||
+            rocks?.[0] ||
+            null;
+        }
+
+        if (activeRock) {
+          const { data: milestones, error: milestoneError } = await supabase
+            .from("weekly_milestones")
+            .select("*")
+            .eq("monthly_rock_id", activeRock.id)
+            .order("week_number", { ascending: true });
+          if (milestoneError) throw milestoneError;
+
+          activeMilestone =
+            milestones?.find((milestone) => milestone.status?.toLowerCase() === "active") ||
+            milestones?.find((milestone) => milestone.status?.toLowerCase() === "pending") ||
+            milestones?.find(
+              (milestone) =>
+                !["completed", "done"].includes(milestone.status?.toLowerCase())
+            ) ||
+            null;
+        }
 
         // Fetch active inputs
-        const { data: inputs } = await supabase
+        const { data: inputs, error: inputError } = await supabase
           .from("input_definitions")
           .select("*")
           .eq("system_id", system.id)
           .eq("active_status", true);
+        if (inputError) throw inputError;
 
         setReviewState((prev) => ({
           ...prev,
@@ -82,19 +149,29 @@ export default function ReviewFlow() {
           inputs: inputs || [],
         }));
       } catch (err) {
-        console.error("[ReviewFlow] Error loading initial data:", err.message);
+        console.error("[ReviewFlow] Error loading initial data:", err);
+        setLoadError(err.message || "Unable to load the review system and roadmap.");
       } finally {
         setLoading(false);
       }
     }
 
     loadData();
-  }, []);
+  }, [reviewContext?.systemId]);
 
   if (loading) {
     return (
       <div className="p-12 text-center text-sm font-semibold text-gray-500 animate-pulse">
         Initializing Investigation Engine...
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-3xl rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
+        <h2 className="font-semibold">Unable to load review data</h2>
+        <p className="mt-2">{loadError}</p>
       </div>
     );
   }

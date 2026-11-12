@@ -183,7 +183,10 @@ export default function Step12Activation() {
             .select()
             .single();
 
-          if (!rockErr && rockData && rock.milestones && rock.milestones.length > 0) {
+          if (rockErr) throw rockErr;
+          if (!rockData) throw new Error(`Rock "${rock.name}" could not be saved.`);
+
+          if (rock.milestones && rock.milestones.length > 0) {
             const milestoneInserts = rock.milestones
               .filter((m) => m.name)
               .map((m, i) => ({
@@ -194,7 +197,10 @@ export default function Step12Activation() {
               }));
 
             if (milestoneInserts.length > 0) {
-              await supabase.from("weekly_milestones").insert(milestoneInserts);
+              const { error: milestoneErr } = await supabase
+                .from("weekly_milestones")
+                .insert(milestoneInserts);
+              if (milestoneErr) throw milestoneErr;
             }
           }
         }

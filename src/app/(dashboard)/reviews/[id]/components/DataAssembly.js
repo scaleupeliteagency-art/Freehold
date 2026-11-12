@@ -69,11 +69,13 @@ export default function DataAssembly({ reviewState, setReviewState, onNext, revi
       .from("year_plans")
       .select("*")
       .eq("system_id", system.id)
-      .order("year_number", { ascending: false })
-      .limit(1);
+      .order("year_number", { ascending: false });
 
     const yearPlans = requireQuerySuccess("year plans", yearResult);
-    const activeYear = yearPlans[0] || null;
+    const activeYear =
+      yearPlans.find((year) => year.status?.toLowerCase() === "active") ||
+      yearPlans[0] ||
+      null;
 
     let activeQuarter = null;
     let activeRock = null;
@@ -84,26 +86,36 @@ export default function DataAssembly({ reviewState, setReviewState, onNext, revi
         .from("quarters")
         .select("*")
         .eq("year_plan_id", activeYear.id)
-        .ilike("status", "active")
-        .limit(1);
+        .order("quarter_number", { ascending: false });
 
-      const quarters = requireQuerySuccess(
-        "active quarter",
-        quarterResult
-      );
+      const quarters = requireQuerySuccess("quarters", quarterResult);
 
-      activeQuarter = quarters[0] || null;
+      activeQuarter =
+        quarters.find((quarter) => quarter.status?.toLowerCase() === "active") ||
+        quarters.find((quarter) => quarter.status?.toLowerCase() === "pending") ||
+        quarters.find(
+          (quarter) =>
+            !["completed", "done"].includes(quarter.status?.toLowerCase())
+        ) ||
+        quarters[0] ||
+        null;
 
       if (activeQuarter) {
         const rockResult = await supabase
           .from("monthly_rocks")
           .select("*")
           .eq("quarter_id", activeQuarter.id)
-          .ilike("status", "active")
-          .limit(1);
+          .order("month", { ascending: true });
 
-        const rocks = requireQuerySuccess("active rock", rockResult);
-        activeRock = rocks[0] || null;
+        const rocks = requireQuerySuccess("rocks for the active quarter", rockResult);
+        activeRock =
+          rocks.find((rock) => rock.status?.toLowerCase() === "active") ||
+          rocks.find((rock) => rock.status?.toLowerCase() === "pending") ||
+          rocks.find(
+            (rock) => !["completed", "done"].includes(rock.status?.toLowerCase())
+          ) ||
+          rocks[0] ||
+          null;
 
         if (activeRock) {
           // Fetch milestones for this rock first, without filtering by
@@ -118,26 +130,24 @@ export default function DataAssembly({ reviewState, setReviewState, onNext, revi
             milestoneResult
           );
 
-          // Compare status case-insensitively.
-          
-const normalizedStatus = (milestone) =>
-  String(milestone.status || "").trim().toLowerCase();
+          const normalizedStatus = (milestone) =>
+            String(milestone.status || "").trim().toLowerCase();
 
-const activeMilestones = milestones.filter(
-  (milestone) => normalizedStatus(milestone) === "active"
-);
+          const activeMilestones = milestones.filter(
+            (milestone) => normalizedStatus(milestone) === "active"
+          );
+          const pendingMilestones = milestones.filter(
+            (milestone) => normalizedStatus(milestone) === "pending"
+          );
 
-const pendingMilestones = milestones.filter(
-  (milestone) => normalizedStatus(milestone) === "pending"
-);
-
-// Prefer the explicitly active milestone.
-// If none exists, fall back to the first pending milestone.
-// Never select a completed milestone as the current milestone.
-activeMilestone =
-  activeMilestones[0] ||
-  pendingMilestones[0] ||
-  null;
+          activeMilestone =
+            activeMilestones[0] ||
+            pendingMilestones[0] ||
+            milestones.find(
+              (milestone) =>
+                !["completed", "done"].includes(normalizedStatus(milestone))
+            ) ||
+            null;
 
           if (!activeMilestone && milestones.length > 0) {
             console.warn(
