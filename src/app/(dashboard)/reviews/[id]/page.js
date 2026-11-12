@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Check, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { loadReviewRoadmap } from "@/lib/reviews/loadReviewRoadmap";
 import useReviewEngineStore from "@/lib/store/useReviewEngineStore";
 
 import DataAssembly from "./components/DataAssembly";
@@ -63,76 +64,10 @@ export default function ReviewFlow() {
           return;
         }
 
-        const { data: yearPlans, error: yearError } = await supabase
-          .from("year_plans")
-          .select("*")
-          .eq("system_id", system.id)
-          .order("year_number", { ascending: false });
-        if (yearError) throw yearError;
-        const activeYear =
-          yearPlans?.find((year) => year.status?.toLowerCase() === "active") ||
-          yearPlans?.[0] ||
-          null;
-
-        let activeQuarter = null;
-        let activeRock = null;
-        let activeMilestone = null;
-
-        if (activeYear) {
-          const { data: quarters, error: quarterError } = await supabase
-            .from("quarters")
-            .select("*")
-            .eq("year_plan_id", activeYear.id)
-            .order("quarter_number", { ascending: false });
-          if (quarterError) throw quarterError;
-
-          activeQuarter =
-            quarters?.find((quarter) => quarter.status?.toLowerCase() === "active") ||
-            quarters?.find((quarter) => quarter.status?.toLowerCase() === "pending") ||
-            quarters?.find(
-              (quarter) =>
-                !["completed", "done"].includes(quarter.status?.toLowerCase())
-            ) ||
-            quarters?.[0] ||
-            null;
-        }
-
-        if (activeQuarter) {
-          const { data: rocks, error: rockError } = await supabase
-            .from("monthly_rocks")
-            .select("*")
-            .eq("quarter_id", activeQuarter.id)
-            .order("month", { ascending: true });
-          if (rockError) throw rockError;
-
-          activeRock =
-            rocks?.find((rock) => rock.status?.toLowerCase() === "active") ||
-            rocks?.find((rock) => rock.status?.toLowerCase() === "pending") ||
-            rocks?.find(
-              (rock) =>
-                !["completed", "done"].includes(rock.status?.toLowerCase())
-            ) ||
-            rocks?.[0] ||
-            null;
-        }
-
-        if (activeRock) {
-          const { data: milestones, error: milestoneError } = await supabase
-            .from("weekly_milestones")
-            .select("*")
-            .eq("monthly_rock_id", activeRock.id)
-            .order("week_number", { ascending: true });
-          if (milestoneError) throw milestoneError;
-
-          activeMilestone =
-            milestones?.find((milestone) => milestone.status?.toLowerCase() === "active") ||
-            milestones?.find((milestone) => milestone.status?.toLowerCase() === "pending") ||
-            milestones?.find(
-              (milestone) =>
-                !["completed", "done"].includes(milestone.status?.toLowerCase())
-            ) ||
-            null;
-        }
+        const { milestone: activeMilestone } = await loadReviewRoadmap(
+          supabase,
+          system.id
+        );
 
         // Fetch active inputs
         const { data: inputs, error: inputError } = await supabase

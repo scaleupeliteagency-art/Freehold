@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Activity, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { loadReviewRoadmap } from "@/lib/reviews/loadReviewRoadmap";
 
 /**
  * DataAssembly — Stage 1 of the Review Flow
@@ -20,6 +21,10 @@ export default function DataAssembly({ reviewState, setReviewState, onNext, revi
   const [assembling, setAssembling] = useState(false);
   const [assembled, setAssembled] = useState(false);
   const [assemblyError, setAssemblyError] = useState(null);
+  const [rockName, setRockName] = useState("");
+  const [milestoneName, setMilestoneName] = useState("");
+  const [savingMilestone, setSavingMilestone] = useState(false);
+  const [milestoneError, setMilestoneError] = useState("");
 
   // Derive period from reviewContext or reviewState
   const periodStart =
@@ -65,105 +70,13 @@ export default function DataAssembly({ reviewState, setReviewState, onNext, revi
       northStarResult
     );
 
-    const yearResult = await supabase
-      .from("year_plans")
-      .select("*")
-      .eq("system_id", system.id)
-      .order("year_number", { ascending: false });
-
-    const yearPlans = requireQuerySuccess("year plans", yearResult);
-    const activeYear =
-      yearPlans.find((year) => year.status?.toLowerCase() === "active") ||
-      yearPlans[0] ||
-      null;
-
-    let activeQuarter = null;
-    let activeRock = null;
-    let activeMilestone = null;
-
-    if (activeYear) {
-      const quarterResult = await supabase
-        .from("quarters")
-        .select("*")
-        .eq("year_plan_id", activeYear.id)
-        .order("quarter_number", { ascending: false });
-
-      const quarters = requireQuerySuccess("quarters", quarterResult);
-
-      activeQuarter =
-        quarters.find((quarter) => quarter.status?.toLowerCase() === "active") ||
-        quarters.find((quarter) => quarter.status?.toLowerCase() === "pending") ||
-        quarters.find(
-          (quarter) =>
-            !["completed", "done"].includes(quarter.status?.toLowerCase())
-        ) ||
-        quarters[0] ||
-        null;
-
-      if (activeQuarter) {
-        const rockResult = await supabase
-          .from("monthly_rocks")
-          .select("*")
-          .eq("quarter_id", activeQuarter.id)
-          .order("month", { ascending: true });
-
-        const rocks = requireQuerySuccess("rocks for the active quarter", rockResult);
-        activeRock =
-          rocks.find((rock) => rock.status?.toLowerCase() === "active") ||
-          rocks.find((rock) => rock.status?.toLowerCase() === "pending") ||
-          rocks.find(
-            (rock) => !["completed", "done"].includes(rock.status?.toLowerCase())
-          ) ||
-          rocks[0] ||
-          null;
-
-        if (activeRock) {
-          // Fetch milestones for this rock first, without filtering by
-          // status in SQL. This helps reveal status-value mismatches.
-          const milestoneResult = await supabase
-            .from("weekly_milestones")
-            .select("*")
-            .eq("monthly_rock_id", activeRock.id);
-
-          const milestones = requireQuerySuccess(
-            "milestones for the active rock",
-            milestoneResult
-          );
-
-          const normalizedStatus = (milestone) =>
-            String(milestone.status || "").trim().toLowerCase();
-
-          const activeMilestones = milestones.filter(
-            (milestone) => normalizedStatus(milestone) === "active"
-          );
-          const pendingMilestones = milestones.filter(
-            (milestone) => normalizedStatus(milestone) === "pending"
-          );
-
-          activeMilestone =
-            activeMilestones[0] ||
-            pendingMilestones[0] ||
-            milestones.find(
-              (milestone) =>
-                !["completed", "done"].includes(normalizedStatus(milestone))
-            ) ||
-            null;
-
-          if (!activeMilestone && milestones.length > 0) {
-            console.warn(
-              "[DataAssembly] Milestones exist for the active rock, " +
-                "but none has status 'active'.",
-              milestones.map((milestone) => ({
-                id: milestone.id,
-                name: milestone.name,
-                status: milestone.status,
-                monthly_rock_id: milestone.monthly_rock_id,
-              }))
-            );
-          }
-        }
-      }
-    }
+    const {
+      year: activeYear,
+      quarter: activeQuarter,
+      rock: activeRock,
+      milestone: activeMilestone,
+      snapshotTableMissing,
+    } = await loadReviewRoadmap(supabase, system.id);
 
       // --- Input definitions ---
       const { data: inputDefs, error: inputError } = await supabase
@@ -267,6 +180,8 @@ export default function DataAssembly({ reviewState, setReviewState, onNext, revi
         yearPlan: activeYear || null,
         quarter: activeQuarter
           ? {
+              id: activeQuarter.id,
+              quarter_number: activeQuarter.quarter_number,
               objective: activeQuarter.objective,
               start_date: activeQuarter.start_date,
               end_date: activeQuarter.end_date,
@@ -275,6 +190,7 @@ export default function DataAssembly({ reviewState, setReviewState, onNext, revi
           : null,
         rock: activeRock
           ? {
+              id: activeRock.id,
               name: activeRock.name,
               description: activeRock.description,
               success_criteria: activeRock.success_criteria,
@@ -292,6 +208,7 @@ export default function DataAssembly({ reviewState, setReviewState, onNext, revi
               deadline: activeMilestone.deadline,
             }
           : null,
+        snapshotTableMissing,
       };
 
       const assembledData = {
@@ -334,6 +251,145 @@ export default function DataAssembly({ reviewState, setReviewState, onNext, revi
       setAssemblyError(err.message);
     } finally {
       setAssembling(false);
+    }
+  };
+
+  const handleCreateMilestone = async () => {
+    const savedHierarchy = reviewState.assembledDataPayload?.goalHierarchy;
+    const cleanMilestoneName = milestoneName.trim();
+    const cleanRockName = rockName.trim();
+
+    if (!cleanMilestoneName || (!savedHierarchy?.rock?.id && !cleanRockName)) {
+      setMilestoneError("Enter a milestone name and, if needed, a rock name.");
+      return;
+    }
+
+    setSavingMilestone(true);
+    setMilestoneError("");
+
+    try {
+      let yearPlan = savedHierarchy.yearPlan;
+      if (!yearPlan?.id) {
+        const { data: yearPlans, error: yearError } = await supabase
+          .from("year_plans")
+          .select("*")
+          .eq("system_id", reviewState.system.id)
+          .order("year_number", { ascending: false });
+        if (yearError) throw yearError;
+
+        yearPlan =
+          yearPlans?.find((item) => item.status?.toLowerCase() === "active") ||
+          yearPlans?.[0] ||
+          null;
+      }
+
+      if (!yearPlan) {
+        const { data, error } = await supabase
+          .from("year_plans")
+          .insert({
+            system_id: reviewState.system.id,
+            year_number: new Date().getFullYear(),
+            status: "active",
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        yearPlan = data;
+      }
+
+      let quarter = savedHierarchy.quarter;
+      if (!quarter?.id) {
+        const { data: quarters, error: quarterError } = await supabase
+          .from("quarters")
+          .select("*")
+          .eq("year_plan_id", yearPlan.id)
+          .order("quarter_number", { ascending: false });
+        if (quarterError) throw quarterError;
+
+        quarter =
+          quarters?.find((item) => item.status?.toLowerCase() === "active") ||
+          quarters?.find((item) => item.status?.toLowerCase() === "pending") ||
+          quarters?.[0] ||
+          null;
+      }
+
+      if (!quarter) {
+        const { data, error } = await supabase
+          .from("quarters")
+          .insert({
+            year_plan_id: yearPlan.id,
+            quarter_number: Math.floor(new Date().getMonth() / 3) + 1,
+            status: "active",
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        quarter = data;
+      }
+
+      let rock = savedHierarchy.rock;
+      if (!rock?.id) {
+        const { data: existingRocks, error: existingRockError } = await supabase
+          .from("monthly_rocks")
+          .select("*")
+          .eq("quarter_id", quarter.id)
+          .eq("name", cleanRockName)
+          .limit(1);
+        if (existingRockError) throw existingRockError;
+
+        rock = existingRocks?.[0] || null;
+        if (!rock) {
+          const { data, error } = await supabase
+            .from("monthly_rocks")
+            .insert({
+              quarter_id: quarter.id,
+              name: cleanRockName,
+              month: Math.floor(new Date().getMonth() / 3) * 3 + 1,
+              status: "active",
+            })
+            .select()
+            .single();
+          if (error) throw error;
+          rock = data;
+        }
+      }
+
+      const { data: createdMilestone, error: milestoneInsertError } = await supabase
+        .from("weekly_milestones")
+        .insert({
+          monthly_rock_id: rock.id,
+          week_number: 1,
+          name: cleanMilestoneName,
+          status: "active",
+        })
+        .select()
+        .single();
+      if (milestoneInsertError) throw milestoneInsertError;
+
+      const updatedHierarchy = {
+        ...savedHierarchy,
+        yearPlan,
+        quarter,
+        rock,
+        milestone: createdMilestone,
+      };
+
+      setReviewState((previous) => ({
+        ...previous,
+        milestone: createdMilestone,
+        goalHierarchy: updatedHierarchy,
+        assembledDataPayload: {
+          ...previous.assembledDataPayload,
+          goalHierarchy: updatedHierarchy,
+        },
+      }));
+      setRockName("");
+      setMilestoneName("");
+    } catch (error) {
+      console.error("[DataAssembly] Could not create the missing milestone:", error);
+      setMilestoneError(error.message || "Could not save the milestone.");
+    } finally {
+      setSavingMilestone(false);
     }
   };
 
@@ -428,13 +484,56 @@ export default function DataAssembly({ reviewState, setReviewState, onNext, revi
 ) : (
   <div className="flex gap-2">
     <span className="text-gray-400 w-24 shrink-0">Milestone</span>
-    <span className="text-yellow-600 text-sm">
-      No active milestone — check milestone statuses
+    <span className="text-yellow-700 text-sm">
+      {assembledDataPayload.goalHierarchy.snapshotTableMissing
+        ? "Roadmap recovery is blocked because public.system_versions is missing. Apply the latest Supabase migration; if no saved snapshot exists, re-enter this system's roadmap."
+        : "No unfinished milestone was found for the selected rock."}
     </span>
   </div>
 )}
 
             </div>
+            {!assembledDataPayload.goalHierarchy.milestone && (
+              <div className="mt-5 space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+<p className="text-sm text-amber-900">
+  The saved roadmap has no unfinished milestone. Add the real
+  milestone name below to continue; no placeholder milestone will be created.
+</p>
+{!assembledDataPayload.goalHierarchy.rock?.id && (
+  <label className="block text-xs font-semibold text-gray-700">
+    Rock name
+    <input
+      value={rockName}
+      onChange={(event) => setRockName(event.target.value)}
+      className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-normal"
+      placeholder="Enter the intended rock name"
+    />
+  </label>
+)}
+<label className="block text-xs font-semibold text-gray-700">
+  Milestone name
+  <input
+    value={milestoneName}
+    onChange={(event) => setMilestoneName(event.target.value)}
+    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-normal"
+    placeholder="Enter the intended milestone name"
+  />
+</label>
+{milestoneError && (
+  <p role="alert" className="text-sm text-red-700">
+    {milestoneError}
+  </p>
+)}
+<button
+  type="button"
+  onClick={handleCreateMilestone}
+  disabled={savingMilestone}
+  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+>
+  {savingMilestone ? "Saving..." : "Save milestone"}
+</button>
+              </div>
+            )}
           </div>
         )}
 
@@ -586,9 +685,11 @@ export default function DataAssembly({ reviewState, setReviewState, onNext, revi
         ) : (
           <button
             onClick={onNext}
-            className="bg-orange-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors flex items-center gap-2 shadow-sm"
+            disabled={!milestone?.id}
+            className="bg-orange-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors flex items-center gap-2 shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Initialize AI Investigation <ArrowRight className="w-4 h-4" />
+            {milestone?.id ? "Initialize AI Investigation" : "Add a milestone to continue"}
+            <ArrowRight className="w-4 h-4" />
           </button>
         )}
       </div>

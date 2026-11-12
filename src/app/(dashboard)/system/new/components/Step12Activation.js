@@ -7,6 +7,17 @@ import useToastStore from "@/lib/store/useToastStore";
 import { supabase } from "@/lib/supabase/client";
 import { CheckCircle2, LockKeyhole, AlertTriangle, ArrowLeft, ShieldCheck, Calendar, Star } from "lucide-react";
 
+function validDateOrNull(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+    ? value
+    : null;
+}
+
 export default function Step12Activation() {
   const {
     systemIdentity,
@@ -168,7 +179,7 @@ export default function Step12Activation() {
 
       // 7. Insert Rocks & Milestones
       if (roadmap.rocks && roadmap.rocks.length > 0) {
-        for (const rock of roadmap.rocks) {
+        for (const [index, rock] of roadmap.rocks.entries()) {
           if (!rock.name) continue;
 
           const { data: rockData, error: rockErr } = await supabase
@@ -177,7 +188,9 @@ export default function Step12Activation() {
               quarter_id: quarterData.id,
               name: rock.name,
               description: rock.desiredOutcome || rock.description || "",
-              deadline: rock.deadline ? rock.deadline : null,
+              success_criteria: rock.successCriteria || null,
+              month: ((Number(roadmap.quarter) || 1) - 1) * 3 + index + 1,
+              deadline: validDateOrNull(rock.deadline),
               status: "active",
             })
             .select()

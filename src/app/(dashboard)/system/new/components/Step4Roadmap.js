@@ -263,11 +263,10 @@ export default function Step4Roadmap() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Measurement / Deadline</label>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Deadline (optional)</label>
                     <input
-                      type="text"
+                      type="date"
                       {...register(`rocks.${index}.deadline`)}
-                      placeholder="e.g. End of Month or YYYY-MM-DD"
                       className="w-full rounded-lg border border-gray-200 px-3.5 py-2 text-sm bg-white text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none"
                     />
                   </div>
